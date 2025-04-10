@@ -10,16 +10,18 @@ trigger:
       - feature/*
 
 pool:
-  name: project-selfhosted-agent  # Make sure it's the one with your self-hosted agent
+  name: project-selfhosted-agent  # Replace with your self-hosted pool name if different
 
 variables:
-  JAVA_HOME: 'C:\Program Files\Java\jdk-21'
+  JAVA_HOME: 'C:\\Program Files\\Java\\jdk-21'
 
 steps:
-- task: UseJava@1
-  inputs:
-    versionSpec: '21'
-    jdkArchitecture: 'x64'
+- script: |
+    echo "Setting Java 21 manually..."
+    set JAVA_HOME=C:\Program Files\Java\jdk-21
+    set PATH=%JAVA_HOME%\bin;%PATH%
+    java -version
+  displayName: 'Set Java & Verify Version'
 
 - script: |
     echo "Building Diet Planner UI..."
@@ -34,6 +36,9 @@ steps:
   displayName: 'Build API Project'
 
 - task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifacts'
   inputs:
-    pathToPublish: '**/target'
+    pathToPublish: '$(System.DefaultWorkingDirectory)'
     artifactName: 'dietplanner-artifacts'
+    publishLocation: 'Container'
+
