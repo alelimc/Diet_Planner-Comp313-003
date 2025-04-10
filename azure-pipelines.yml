@@ -1,0 +1,39 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+
+pool:
+  name: project-selfhosted-agent  # Make sure it's the one with your self-hosted agent
+
+variables:
+  JAVA_HOME: 'C:\Program Files\Java\jdk-21'
+
+steps:
+- task: UseJava@1
+  inputs:
+    versionSpec: '21'
+    jdkArchitecture: 'x64'
+
+- script: |
+    echo "Building Diet Planner UI..."
+    cd Diet_Planner-Comp313-003
+    mvn clean install
+  displayName: 'Build UI Project'
+
+- script: |
+    echo "Building Meal Service API..."
+    cd DietPlanner_MealServiceAPI
+    mvn clean install
+  displayName: 'Build API Project'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: '**/target'
+    artifactName: 'dietplanner-artifacts'
