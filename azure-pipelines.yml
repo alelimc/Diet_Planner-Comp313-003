@@ -13,47 +13,54 @@ pool:
 
 variables:
   JAVA_HOME: 'C:\Program Files\Java\jdk-17.0.14.7'
-  MAVEN_HOME: 'C:\Apache\Maven'  
+  MAVEN_HOME: 'C:\Apache\Maven'
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
-  SONAR_SCANNER_HOME: 'C:\sonar-scanner-4.8.1.3023-windows'
-  SONAR_JAVA_PATH: 'C:\Program Files\Java\jdk-17.0.14.7\bin\java.exe'  
+  SONAR_SCANNER_HOME: 'C:\sonar-scanner-5.0.1.3006-windows'
+  SONAR_JAVA_PATH: 'C:\Program Files\Java\jdk-17.0.14.7\bin\java.exe'
 
 steps:
-# Setup Environment with Path Verification
+# Download and setup compatible SonarScanner
 - task: CmdLine@2
-  displayName: 'Setup and Verify Environment'
+  displayName: 'Install SonarScanner'
   inputs:
     script: |
-      echo JAVA_HOME=%JAVA_HOME%
-      echo MAVEN_HOME=%MAVEN_HOME%
+      if not exist "%SONAR_SCANNER_HOME%" (
+        echo Downloading SonarScanner...
+        curl -o sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-windows.zip
+        tar -xf sonar-scanner.zip -C C:\
+        ren C:\sonar-scanner-5.0.1.3006-windows sonar-scanner
+        echo ##vso[task.setvariable variable=SONAR_SCANNER_HOME]C:\sonar-scanner
+      )
       echo ##vso[task.prependpath]%SONAR_SCANNER_HOME%\bin
 
-      REM Verify Java installation
+# Setup and verify environment
+- task: CmdLine@2
+  displayName: 'Setup Environment'
+  inputs:
+    script: |
+      echo ##vso[task.prependpath]%JAVA_HOME%\bin
+      echo ##vso[task.prependpath]%MAVEN_HOME%\bin
+      
+      echo Verifying installations...
       if not exist "%JAVA_HOME%\bin\java.exe" (
         echo Error: Java not found at %JAVA_HOME%\bin\java.exe
         exit /b 1
       )
-      
-      REM Verify Maven installation
       if not exist "%MAVEN_HOME%\bin\mvn.cmd" (
         echo Error: Maven not found at %MAVEN_HOME%\bin\mvn.cmd
         exit /b 1
       )
+      if not exist "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat" (
+        echo Error: SonarScanner not found at %SONAR_SCANNER_HOME%\bin\sonar-scanner.bat
+        exit /b 1
+      )
       
-      echo ##vso[task.setvariable variable=JAVA_HOME]%JAVA_HOME%
-      echo ##vso[task.setvariable variable=MAVEN_HOME]%MAVEN_HOME%
-      echo ##vso[task.prependpath]%JAVA_HOME%\bin
-      echo ##vso[task.prependpath]%MAVEN_HOME%\bin
-      
-      echo Java Version:
+      echo Versions:
       java -version
-      
-      echo Maven Version:
       mvn -version
-  env:
-    PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
+      sonar-scanner -v
 
-# Build UI Project
+# Build projects
 - task: CmdLine@2
   displayName: 'Build UI Project'
   inputs:
@@ -61,11 +68,8 @@ steps:
       cd Diet_Planner-Comp313-003
       mvn clean verify
   env:
-    JAVA_HOME: $(JAVA_HOME)
-    MAVEN_HOME: $(MAVEN_HOME)
     PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
 
-# Build API Project
 - task: CmdLine@2
   displayName: 'Build API Project'
   inputs:
@@ -73,42 +77,27 @@ steps:
       cd DietPlanner_MealServiceAPI
       mvn clean verify
   env:
-    JAVA_HOME: $(JAVA_HOME)
-    MAVEN_HOME: $(MAVEN_HOME)
     PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
 
-# SonarQube Analysis
+# SonarQube analysis
 - task: CmdLine@2
-  displayName: 'Verify SonarScanner'
-  inputs:
-    script: |
-      echo SONAR_SCANNER_HOME=%SONAR_SCANNER_HOME%
-      dir "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat"
-      "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat" -v
-      echo Java being used by SonarScanner:
-      "%SONAR_JAVA_PATH%" -version
-      echo SonarScanner version:
-      sonar-scanner -v
-- task: CmdLine@2
-  displayName: 'Run SonarQube Scanner'
+  displayName: 'Run SonarQube Analysis'
   inputs:
     script: |
       set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
-      "C:\sonar-scanner-4.8.1.3023-windows\bin\sonar-scanner.bat" ^
+      sonar-scanner ^
         -Dsonar.projectKey=dietplanner ^
         -Dsonar.projectName="Diet Planner App" ^
         -Dsonar.sources=. ^
         -Dsonar.java.binaries=**/target/classes ^
         -Dsonar.sourceEncoding=UTF-8 ^
         -Dsonar.java.source=17 ^
-        -Dsonar.java.version=17        
-
+        -Dsonar.java.version=17 ^
+        -X
   env:
-    JAVA_HOME: $(JAVA_HOME)
-    MAVEN_HOME: $(MAVEN_HOME)
     PATH: $(SONAR_SCANNER_HOME)\bin;$(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
 
-# Publish Test Results
+# Test and coverage reporting
 - task: PublishTestResults@2
   condition: succeededOrFailed()
   inputs:
@@ -116,7 +105,6 @@ steps:
     testRunTitle: 'Java Unit Tests'
   displayName: 'Publish Test Results'
 
-# Publish Code Coverage
 - task: PublishCodeCoverageResults@1
   inputs:
     codeCoverageTool: 'JaCoCo'
@@ -124,7 +112,7 @@ steps:
     reportDirectory: '**/target/site/jacoco'
   displayName: 'Publish Code Coverage'
 
-# Publish Artifacts
+# Artifacts
 - task: PublishBuildArtifacts@1
   inputs:
     pathToPublish: '**/target/*.?ar'
