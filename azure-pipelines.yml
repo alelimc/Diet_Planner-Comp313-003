@@ -157,6 +157,7 @@ stages:
   dependsOn: CI
   jobs:
     - job: Archive
+      displayName: 'Archive and Publish Artifacts'
       steps:
         # Download artifacts from previous stage
         - task: DownloadPipelineArtifact@2
@@ -171,20 +172,38 @@ stages:
             artifactName: 'dietplanner-api'
             targetPath: '$(Pipeline.Workspace)/DietPlanner_MealServiceAPI/target'
 
-        # Publish as build artifacts
+        # Copy UI files to staging directory
+        - task: CopyFiles@2
+          displayName: 'Copy UI files to staging directory'
+          inputs:
+            SourceFolder: '$(Pipeline.Workspace)/Diet_Planner-Comp313-003/target'
+            Contents: '**'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/dietplanner-ui'
+
+        # Copy API files to staging directory
+        - task: CopyFiles@2
+          displayName: 'Copy API files to staging directory'
+          inputs:
+            SourceFolder: '$(Pipeline.Workspace)/DietPlanner_MealServiceAPI/target'
+            Contents: '**'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/dietplanner-api'
+
+        # Publish UI artifact with unique name
         - task: PublishBuildArtifacts@1
           displayName: 'Publish UI Artifact'
           inputs:
-            PathtoPublish: '$(Pipeline.Workspace)/Diet_Planner-Comp313-003/target'
-            ArtifactName: 'dietplanner-ui'
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/dietplanner-ui'
+            ArtifactName: 'dietplanner-ui-$(Build.BuildId)'
             publishLocation: 'Container'
 
+        # Publish API artifact with unique name
         - task: PublishBuildArtifacts@1
           displayName: 'Publish API Artifact'
           inputs:
-            PathtoPublish: '$(Pipeline.Workspace)/DietPlanner_MealServiceAPI/target'
-            ArtifactName: 'dietplanner-api'
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/dietplanner-api'
+            ArtifactName: 'dietplanner-api-$(Build.BuildId)'
             publishLocation: 'Container'
+
 
 # -----------------------------------------
 # Deploy to Dev Environment (Mocked App Run)
