@@ -7,7 +7,6 @@ trigger:
   branches:
     include:
       - main
-      - feature/*
 
 pool:
   name: project-selfhosted-agent
@@ -41,7 +40,7 @@ steps:
       sonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
       sonar.java.source=17
       sonar.java.binaries=**/target/classes
-      sonar.branch.name="" # ADD THIS LINE TO AVOID BRANCH ANALYSIS      
+      sonar.branch.name=  
   displayName: 'Prepare SonarQube Analysis'
 
 # Build UI Project
