@@ -10,35 +10,84 @@ trigger:
       - feature/*
 
 pool:
-  name: project-selfhosted-agent  # Replace with your self-hosted pool name if different
+  name: project-selfhosted-agent  # Your self-hosted agent pool name
 
 variables:
-  JAVA_HOME: 'C:\\Program Files\\Java\\jdk-21'
+  JAVA_HOME: 'C:\\Program Files\\Java\\jdk-17'  # Changed to JDK 17
+  MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
 
 steps:
+# Set Java 17 environment
 - script: |
-    echo "Setting Java 21 manually..."
-    set JAVA_HOME=C:\Program Files\Java\jdk-21
+    echo "Setting Java 17 environment..."
+    set JAVA_HOME=C:\Program Files\Java\jdk-17.0.14.7
     set PATH=%JAVA_HOME%\bin;%PATH%
     java -version
-  displayName: 'Set Java & Verify Version'
+    mvn -version
+  displayName: 'Setup Java 17 & Maven'
 
+# SonarQube Preparation
+- task: SonarQubePrepare@5
+  inputs:
+    SonarQube: 'SonarQubeLocalConn'  # Your SonarQube service connection
+    scannerMode: 'CLI'
+    configMode: 'manual'
+    cliProjectKey: 'dietplanner'
+    cliProjectName: 'Diet Planner App'
+    extraProperties: |
+      sonar.sources=.
+      sonar.java.binaries=**/target/classes
+      sonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
+      sonar.modules=ui-module,api-module
+      ui-module.sonar.projectBaseDir=Diet_Planner-Comp313-003
+      api-module.sonar.projectBaseDir=DietPlanner_MealServiceAPI
+      sonar.java.source=17
+  displayName: 'SonarQube Prepare'
+
+# Build UI project with Sonar analysis
 - script: |
     echo "Building Diet Planner UI..."
     cd Diet_Planner-Comp313-003
-    mvn clean install
-  displayName: 'Build UI Project'
+    mvn clean verify sonar:sonar -Dsonar.java.source=17
+  displayName: 'Build UI Project with Sonar'
 
+# Build API project with Sonar analysis
 - script: |
     echo "Building Meal Service API..."
     cd DietPlanner_MealServiceAPI
-    mvn clean install
-  displayName: 'Build API Project'
+    mvn clean verify sonar:sonar -Dsonar.java.source=17
+  displayName: 'Build API Project with Sonar'
 
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifacts'
+# SonarQube Analysis
+- task: SonarQubeAnalyze@5
+  displayName: 'SonarQube Analysis'
+
+# SonarQube Publish Results
+- task: SonarQubePublish@5
   inputs:
-    pathToPublish: '$(System.DefaultWorkingDirectory)'
+    pollingTimeoutSec: '300'
+  displayName: 'Publish SonarQube Results'
+
+# Publish Unit Test Results
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+    testRunTitle: 'Java Unit Tests'
+  displayName: 'Publish Test Results'
+
+# Publish Code Coverage
+- task: PublishCodeCoverageResults@1
+  inputs:
+    codeCoverageTool: 'JaCoCo'
+    summaryFileLocation: '**/target/site/jacoco/jacoco.xml'
+    reportDirectory: '**/target/site/jacoco'
+  displayName: 'Publish Code Coverage'
+
+# Publish Artifacts
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: '**/target/*.?ar'  # This will pick up JAR/WAR files
     artifactName: 'dietplanner-artifacts'
     publishLocation: 'Container'
-
+  displayName: 'Publish Build Artifacts'
