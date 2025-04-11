@@ -18,7 +18,7 @@ variables:
 steps:
 
 # Java Setup
-- pwsh: |
+- powershell: |
     $env:PATH += ";C:\Windows\System32\WindowsPowerShell\v1.0\"
     $javaHome = "$env:JAVA_HOME"
     Write-Host "Setting JAVA_HOME to $javaHome"
