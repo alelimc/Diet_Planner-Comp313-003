@@ -66,16 +66,18 @@ stages:
           displayName: 'Build UI Project'
           inputs:
             script: |
-              cd Diet_Planner-Comp313-003
-              mvn clean verify
+              cd Diet_Planner-Comp313-003 && mvn -B clean verify
+              echo "✅ UI build complete. Contents of target:"
+              dir target
 
         # Build API
         - task: CmdLine@2
           displayName: 'Build API Project'
           inputs:
             script: |
-              cd DietPlanner_MealServiceAPI
-              mvn clean verify
+              cd DietPlanner_MealServiceAPI && mvn -B clean verify
+              echo "✅ API build complete. Contents of target:"
+              dir target
 
         # Sonar Scanner
         - task: CmdLine@2
