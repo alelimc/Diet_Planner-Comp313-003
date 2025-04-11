@@ -127,13 +127,15 @@ stages:
           inputs:
             PathtoPublish: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
             ArtifactName: 'dietplanner-ui'
+            publishLocation: 'Container'
 
         - task: PublishBuildArtifacts@1
           displayName: 'Publish API Artifact'
           inputs:
             PathtoPublish: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
             ArtifactName: 'dietplanner-api'
-
+            publishLocation: 'Container'
+            
 # -----------------------------------------
 # Deploy to Dev Environment (Mocked App Run)
 # -----------------------------------------
