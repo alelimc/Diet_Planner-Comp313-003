@@ -26,128 +26,130 @@ stages:
 - stage: CI
   displayName: 'Continuous Integration'
   jobs:
-  - job: BuildAndTest
-    displayName: 'Build and Test'
-    steps:
-      # Checkout with clean: true (safe now due to artifact relocation)
-      - checkout: self
-        clean: true
-        displayName: 'Checkout Code'
+    - job: BuildAndTest
+      displayName: 'Build and Test'
+      steps:
+        # Checkout with clean: true (safe now due to artifact relocation)
+        - checkout: self
+          clean: true
+          displayName: 'Checkout Code'
 
-      # Setup Environment (same as before)
-      - task: CmdLine@2
-        displayName: 'Setup and Verify Environment'
-        inputs:
-          script: |
-            echo JAVA_HOME=%JAVA_HOME%
-            echo MAVEN_HOME=%MAVEN_HOME%
-            echo ##vso[task.prependpath]%SONAR_SCANNER_HOME%\bin
+        # Setup Environment
+        - task: CmdLine@2
+          displayName: 'Setup and Verify Environment'
+          inputs:
+            script: |
+              echo JAVA_HOME=%JAVA_HOME%
+              echo MAVEN_HOME=%MAVEN_HOME%
+              echo ##vso[task.prependpath]%SONAR_SCANNER_HOME%\bin
 
-            if not exist "%JAVA_HOME%\bin\java.exe" (
-              echo Error: Java not found.
-              exit /b 1
-            )
+              if not exist "%JAVA_HOME%\bin\java.exe" (
+                echo Error: Java not found.
+                exit /b 1
+              )
 
-            if not exist "%MAVEN_HOME%\bin\mvn.cmd" (
-              echo Error: Maven not found.
-              exit /b 1
-            )
+              if not exist "%MAVEN_HOME%\bin\mvn.cmd" (
+                echo Error: Maven not found.
+                exit /b 1
+              )
 
-            echo ##vso[task.setvariable variable=JAVA_HOME]%JAVA_HOME%
-            echo ##vso[task.setvariable variable=MAVEN_HOME]%MAVEN_HOME%
-            echo ##vso[task.prependpath]%JAVA_HOME%\bin
-            echo ##vso[task.prependpath]%MAVEN_HOME%\bin
+              echo ##vso[task.setvariable variable=JAVA_HOME]%JAVA_HOME%
+              echo ##vso[task.setvariable variable=MAVEN_HOME]%MAVEN_HOME%
+              echo ##vso[task.prependpath]%JAVA_HOME%\bin
+              echo ##vso[task.prependpath]%MAVEN_HOME%\bin
 
-            java -version
-            mvn -version
-            sonar-scanner -v
-        env:
-          PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
+              java -version
+              mvn -version
+              sonar-scanner -v
+          env:
+            PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
 
-      # Build UI Project
-      - task: CmdLine@2
-        displayName: 'Build UI Project'
-        inputs:
-          script: |
-            cd Diet_Planner-Comp313-003
-            mvn -B clean package
-            echo "✅ UI build complete. Contents of target:"
-            dir /s /b target
+        # Build UI Project
+        - task: CmdLine@2
+          displayName: 'Build UI Project'
+          inputs:
+            script: |
+              cd Diet_Planner-Comp313-003
+              mvn -B clean package
+              echo "✅ UI build complete. Contents of target:"
+              dir /s /b target
 
-      # Copy UI build to artifact staging dir
-      - task: CopyFiles@2
-        displayName: 'Copy UI build to staging'
-        inputs:
-          SourceFolder: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
-          Contents: '**'
-          TargetFolder: '$(Build.ArtifactStagingDirectory)/ui-build'
+        # Copy UI build to artifact staging dir
+        - task: CopyFiles@2
+          displayName: 'Stage UI Artifacts'
+          inputs:
+            SourceFolder: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
+            Contents: '**'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/ui'
 
-      # Build API Project
-      - task: CmdLine@2
-        displayName: 'Build API Project'
-        inputs:
-          script: |
-            cd DietPlanner_MealServiceAPI
-            mvn -B clean package
-            echo "✅ API build complete. Contents of target:"
-            dir /s /b target
+        # Build API Project
+        - task: CmdLine@2
+          displayName: 'Build API Project'
+          inputs:
+            script: |
+              cd DietPlanner_MealServiceAPI
+              mvn -B clean package
+              echo "✅ API build complete. Contents of target:"
+              dir /s /b target
 
-      # Copy API build to artifact staging dir
-      - task: CopyFiles@2
-        displayName: 'Copy API build to staging'
-        inputs:
-          SourceFolder: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
-          Contents: '**'
-          TargetFolder: '$(Build.ArtifactStagingDirectory)/api-build'
+        # Copy API build to artifact staging dir
+        - task: CopyFiles@2
+          displayName: 'Stage API Artifacts'
+          inputs:
+            SourceFolder: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
+            Contents: '**'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/api'
 
-      # Publish artifacts from outside repo directory CI Stage
-      - task: PublishPipelineArtifact@1
-        displayName: 'Publish UI Artifact'
-        inputs:
-          targetPath: '$(Build.ArtifactStagingDirectory)/ui-build'
-          artifactName: 'dietplanner-ui-$(Build.BuildId)'
+        # Publish artifacts with consistent naming
+        - task: PublishPipelineArtifact@1
+          displayName: 'Publish UI Artifact'
+          inputs:
+            targetPath: '$(Build.ArtifactStagingDirectory)/ui'
+            artifactName: 'dietplanner-ui'
+            artifactType: 'pipeline'
 
-      - task: PublishPipelineArtifact@1
-        displayName: 'Publish API Artifact'
-        inputs:
-          targetPath: '$(Build.ArtifactStagingDirectory)/api-build'
-          artifactName: 'dietplanner-api-$(Build.BuildId)'
+        - task: PublishPipelineArtifact@1
+          displayName: 'Publish API Artifact'
+          inputs:
+            targetPath: '$(Build.ArtifactStagingDirectory)/api'
+            artifactName: 'dietplanner-api'
+            artifactType: 'pipeline'
 
-      # Sonar Scanner (runs before checkout clean wipes target)
-      - task: CmdLine@2
-        displayName: 'Run SonarQube Scanner'
-        inputs:
-          script: |
-            set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
-            "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat" ^
-              -Dsonar.host.url=%SONARQUBE_URL% ^
-              -Dsonar.login=%SONARQUBE_TOKEN% ^
-              -Dsonar.projectKey=dietplanner ^
-              -Dsonar.projectName="Diet Planner App" ^
-              -Dsonar.sources=. ^
-              -Dsonar.java.binaries=**/target/classes ^
-              -Dsonar.sourceEncoding=UTF-8 ^
-              -Dsonar.java.source=17 ^
-              -Dsonar.java.version=17 ^
-              -X
-        env:
-          JAVA_HOME: $(JAVA_HOME)
-          MAVEN_HOME: $(MAVEN_HOME)
-          PATH: $(SONAR_SCANNER_HOME)\bin;$(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
-          SONARQUBE_TOKEN: $(sonarqubeTokenPAT)
+        # Sonar Scanner
+        - task: CmdLine@2
+          displayName: 'Run SonarQube Scanner'
+          inputs:
+            script: |
+              set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
+              "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat" ^
+                -Dsonar.host.url=%SONARQUBE_URL% ^
+                -Dsonar.login=%SONARQUBE_TOKEN% ^
+                -Dsonar.projectKey=dietplanner ^
+                -Dsonar.projectName="Diet Planner App" ^
+                -Dsonar.sources=. ^
+                -Dsonar.java.binaries=**/target/classes ^
+                -Dsonar.sourceEncoding=UTF-8 ^
+                -Dsonar.java.source=17 ^
+                -Dsonar.java.version=17 ^
+                -X
+          env:
+            JAVA_HOME: $(JAVA_HOME)
+            MAVEN_HOME: $(MAVEN_HOME)
+            PATH: $(SONAR_SCANNER_HOME)\bin;$(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
+            SONARQUBE_TOKEN: $(sonarqubeTokenPAT)
 
-      # Unit Test Results
-      - task: PublishTestResults@2
-        inputs:
-          testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
-          testRunTitle: 'Java Unit Tests'
+        # Unit Test Results
+        - task: PublishTestResults@2
+          inputs:
+            testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+            testRunTitle: 'Java Unit Tests'
 
-      # Code Coverage
-      - task: PublishCodeCoverageResults@1
-        inputs:
-          codeCoverageTool: 'JaCoCo'
-          summaryFileLocation: '**/target/site/jacoco/jacoco.xml'
-          reportDirectory: '**/target/site/jacoco'
+        # Code Coverage
+        - task: PublishCodeCoverageResults@1
+          inputs:
+            codeCoverageTool: 'JaCoCo'
+            summaryFileLocation: '**/target/site/jacoco/jacoco.xml'
+            reportDirectory: '**/target/site/jacoco'
 
 # -----------------------------------------
 # Deliver Stage - Archive Artifacts
@@ -159,51 +161,33 @@ stages:
     - job: Archive
       displayName: 'Archive and Publish Artifacts'
       steps:
-        # Download artifacts from previous stage
+        # Download artifacts from current pipeline run
         - task: DownloadPipelineArtifact@2
           displayName: 'Download UI Artifact'
           inputs:
             artifactName: 'dietplanner-ui'
-            targetPath: '$(Pipeline.Workspace)/Diet_Planner-Comp313-003/target'
+            path: '$(Pipeline.Workspace)/ui-artifacts'
 
         - task: DownloadPipelineArtifact@2
           displayName: 'Download API Artifact'
           inputs:
             artifactName: 'dietplanner-api'
-            targetPath: '$(Pipeline.Workspace)/DietPlanner_MealServiceAPI/target'
+            path: '$(Pipeline.Workspace)/api-artifacts'
 
-        # Copy UI files to staging directory
-        - task: CopyFiles@2
-          displayName: 'Copy UI files to staging directory'
-          inputs:
-            SourceFolder: '$(Pipeline.Workspace)/Diet_Planner-Comp313-003/target'
-            Contents: '**'
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/dietplanner-ui'
-
-        # Copy API files to staging directory
-        - task: CopyFiles@2
-          displayName: 'Copy API files to staging directory'
-          inputs:
-            SourceFolder: '$(Pipeline.Workspace)/DietPlanner_MealServiceAPI/target'
-            Contents: '**'
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/dietplanner-api'
-
-        # Publish UI artifact with unique name
+        # Publish as downloadable build artifacts
         - task: PublishBuildArtifacts@1
           displayName: 'Publish UI Artifact'
           inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/dietplanner-ui'
-            ArtifactName: 'dietplanner-ui-$(Build.BuildId)'
+            PathtoPublish: '$(Pipeline.Workspace)/ui-artifacts'
+            ArtifactName: 'dietplanner-ui'
             publishLocation: 'Container'
 
-        # Publish API artifact with unique name
         - task: PublishBuildArtifacts@1
           displayName: 'Publish API Artifact'
           inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/dietplanner-api'
-            ArtifactName: 'dietplanner-api-$(Build.BuildId)'
+            PathtoPublish: '$(Pipeline.Workspace)/api-artifacts'
+            ArtifactName: 'dietplanner-api'
             publishLocation: 'Container'
-
 
 # -----------------------------------------
 # Deploy to Dev Environment (Mocked App Run)
