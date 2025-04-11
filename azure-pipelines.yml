@@ -20,7 +20,6 @@ variables:
   SONARQUBE_URL: 'http://localhost:9000'
 
 stages:
-
 # -----------------------------------------
 # CI Stage
 # -----------------------------------------
@@ -30,6 +29,10 @@ stages:
     - job: BuildAndTest
       displayName: 'Build and Test'
       steps:
+        # Checkout with clean=false to preserve previous builds
+        - checkout: self
+          clean: false
+          displayName: 'Checkout code (preserve existing)'
 
         # Setup Environment
         - task: CmdLine@2
@@ -79,6 +82,21 @@ stages:
               echo "✅ API build complete. Contents of target:"
               dir /s /b target
 
+        # Publish artifacts as pipeline artifacts
+        - task: PublishPipelineArtifact@1
+          displayName: 'Publish UI Artifact'
+          inputs:
+            targetPath: 'Diet_Planner-Comp313-003/target'
+            artifactName: 'dietplanner-ui'
+            artifactType: 'pipeline'
+
+        - task: PublishPipelineArtifact@1
+          displayName: 'Publish API Artifact'
+          inputs:
+            targetPath: 'DietPlanner_MealServiceAPI/target'
+            artifactName: 'dietplanner-api'
+            artifactType: 'pipeline'
+            
         # Sonar Scanner
         - task: CmdLine@2
           displayName: 'Run SonarQube Scanner'
@@ -124,48 +142,34 @@ stages:
   jobs:
     - job: Archive
       steps:
-        # Check and publish UI artifacts
-        - task: CmdLine@2
-          displayName: 'Find UI Artifacts'
+        # Download artifacts from previous stage
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download UI Artifact'
           inputs:
-            script: |
-              echo "Looking for UI artifacts..."
-              cd Diet_Planner-Comp313-003
-              dir /b target\*.?ar > artifacts.txt
-              set /p ARTIFACTS=<artifacts.txt
-              echo ##vso[task.setvariable variable=UI_ARTIFACT_FOUND]true
-              echo Found artifact: %ARTIFACTS%
-          continueOnError: true
+            artifactName: 'dietplanner-ui'
+            targetPath: '$(Pipeline.Workspace)/Diet_Planner-Comp313-003/target'
 
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download API Artifact'
+          inputs:
+            artifactName: 'dietplanner-api'
+            targetPath: '$(Pipeline.Workspace)/DietPlanner_MealServiceAPI/target'
+
+        # Publish as build artifacts
         - task: PublishBuildArtifacts@1
           displayName: 'Publish UI Artifact'
-          condition: eq(variables.UI_ARTIFACT_FOUND, 'true')
           inputs:
-            PathtoPublish: 'Diet_Planner-Comp313-003/target'
+            PathtoPublish: '$(Pipeline.Workspace)/Diet_Planner-Comp313-003/target'
             ArtifactName: 'dietplanner-ui'
             publishLocation: 'Container'
 
-        # Check and publish API artifacts
-        - task: CmdLine@2
-          displayName: 'Find API Artifacts'
-          inputs:
-            script: |
-              echo "Looking for API artifacts..."
-              cd DietPlanner_MealServiceAPI
-              dir /b target\*.?ar > artifacts.txt
-              set /p ARTIFACTS=<artifacts.txt
-              echo ##vso[task.setvariable variable=API_ARTIFACT_FOUND]true
-              echo Found artifact: %ARTIFACTS%
-          continueOnError: true
-
         - task: PublishBuildArtifacts@1
           displayName: 'Publish API Artifact'
-          condition: eq(variables.API_ARTIFACT_FOUND, 'true')
           inputs:
-            PathtoPublish: 'DietPlanner_MealServiceAPI/target'
+            PathtoPublish: '$(Pipeline.Workspace)/DietPlanner_MealServiceAPI/target'
             ArtifactName: 'dietplanner-api'
             publishLocation: 'Container'
-            
+
 # -----------------------------------------
 # Deploy to Dev Environment (Mocked App Run)
 # -----------------------------------------
@@ -233,4 +237,3 @@ stages:
             script: |
               echo Deploying to Production environment...
               timeout /t 2
-
