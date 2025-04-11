@@ -13,24 +13,22 @@ pool:
   name: project-selfhosted-agent
 
 variables:
-  JAVA_HOME_17: 'C:\\Program Files\\Java\\jdk-17.0.14.7'  # Updated with exact path from your logs
+  JAVA_HOME_17: 'C:\\Program Files\\Java\\jdk-17.0.14.7'
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
 
 steps:
-# Robust Java environment setup
+
+# Java Setup
 - powershell: |
     $javaHome = "$env:JAVA_HOME_17"
     Write-Host "Setting JAVA_HOME to $javaHome"
     Write-Host "##vso[task.setvariable variable=JAVA_HOME]$javaHome"
     Write-Host "##vso[task.prependpath]$javaHome\bin"
-    
-    Write-Host "=== Java Information ==="
-    & "$javaHome\bin\java" -version 2>&1 | ForEach-Object { Write-Host $_ }
-    Write-Host "=== Maven Information ==="
+    & "$javaHome\bin\java" -version
     mvn -version
   displayName: 'Setup Java 17 Environment'
 
-# SonarQube Preparation
+# SonarQube Prepare
 - task: SonarQubePrepare@5
   inputs:
     SonarQube: 'SonarQubeLocalConn'
@@ -40,43 +38,34 @@ steps:
     cliProjectName: 'Diet Planner App'
     extraProperties: |
       sonar.sources=.
-      sonar.java.binaries=**/target/classes
       sonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
-      sonar.modules=ui-module,api-module
-      ui-module.sonar.projectBaseDir=Diet_Planner-Comp313-003
-      api-module.sonar.projectBaseDir=DietPlanner_MealServiceAPI
       sonar.java.source=17
-  displayName: 'SonarQube Prepare'
+      sonar.java.binaries=**/target/classes
+  displayName: 'Prepare SonarQube Analysis'
 
-# Build UI project with Sonar analysis
-- powershell: |
-    Write-Host "Current JAVA_HOME: $env:JAVA_HOME"
-    Write-Host "Current PATH: $env:PATH"
-    
+# Build UI Project
+- script: |
     cd Diet_Planner-Comp313-003
-    mvn clean verify sonar:sonar -Dsonar.java.source=17
-  displayName: 'Build UI Project with Sonar'
+    mvn clean verify
+  displayName: 'Build UI Project'
   env:
     JAVA_HOME: $(JAVA_HOME_17)
     PATH: $(JAVA_HOME_17)\bin;$(PATH)
 
-# Build API project with Sonar analysis
-- powershell: |
-    Write-Host "Current JAVA_HOME: $env:JAVA_HOME"
-    Write-Host "Current PATH: $env:PATH"
-    
+# Build API Project
+- script: |
     cd DietPlanner_MealServiceAPI
-    mvn clean verify sonar:sonar -Dsonar.java.source=17
-  displayName: 'Build API Project with Sonar'
+    mvn clean verify
+  displayName: 'Build API Project'
   env:
     JAVA_HOME: $(JAVA_HOME_17)
     PATH: $(JAVA_HOME_17)\bin;$(PATH)
 
-# SonarQube Analysis
+# Run SonarQube Analysis
 - task: SonarQubeAnalyze@5
-  displayName: 'SonarQube Analysis'
+  displayName: 'Run SonarQube Analysis'
 
-# SonarQube Publish Results
+# Publish Quality Gate Results
 - task: SonarQubePublish@5
   inputs:
     pollingTimeoutSec: '300'
@@ -98,7 +87,7 @@ steps:
     reportDirectory: '**/target/site/jacoco'
   displayName: 'Publish Code Coverage'
 
-# Publish Artifacts
+# Publish Build Artifacts
 - task: PublishBuildArtifacts@1
   inputs:
     pathToPublish: '**/target/*.?ar'
