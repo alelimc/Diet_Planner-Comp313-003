@@ -44,10 +44,10 @@ steps:
   displayName: 'Prepare SonarQube Analysis'
 
 # Build UI Project
-- powershell: |
+- script: |
     cd Diet_Planner-Comp313-003
-    mvn clean verify sonar:sonar -Dsonar.java.source=17 -DskipTests
-  displayName: 'Build UI Project with Sonar'
+    mvn clean verify
+  displayName: 'Build UI Project'
   env:
     JAVA_HOME: $(JAVA_HOME_17)
     PATH: $(JAVA_HOME_17)\bin;$(PATH)
