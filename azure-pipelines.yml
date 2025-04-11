@@ -27,22 +27,6 @@ steps:
     mvn -version
   displayName: 'Setup Java 17 Environment'
 
-# SonarQube Prepare
-- task: SonarQubePrepare@5
-  inputs:
-    SonarQube: 'SonarQubeLocalConn'
-    scannerMode: 'CLI'
-    configMode: 'manual'
-    cliProjectKey: 'dietplanner'
-    cliProjectName: 'Diet Planner App'
-    extraProperties: |
-      sonar.sources=.
-      sonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
-      sonar.java.source=17
-      sonar.java.binaries=**/target/classes
-      sonar.branch.name=  
-  displayName: 'Prepare SonarQube Analysis'
-
 # Build UI Project
 - script: |
     cd Diet_Planner-Comp313-003
@@ -61,15 +45,19 @@ steps:
     JAVA_HOME: $(JAVA_HOME_17)
     PATH: $(JAVA_HOME_17)\bin;$(PATH)
 
-# Run SonarQube Analysis
-- task: SonarQubeAnalyze@5
-  displayName: 'Run SonarQube Analysis'
-
-# Publish Quality Gate Results
-- task: SonarQubePublish@5
-  inputs:
-    pollingTimeoutSec: '300'
-  displayName: 'Publish SonarQube Results'
+# ✅ Manual SonarQube Analysis
+- script: |
+    sonar-scanner ^
+      -Dsonar.projectKey=dietplanner ^
+      -Dsonar.projectName="Diet Planner App" ^
+      -Dsonar.sources=. ^
+      -Dsonar.java.binaries=**/target/classes ^
+      -Dsonar.sourceEncoding=UTF-8 ^
+      -Dsonar.java.source=17
+  displayName: 'Run SonarQube Scanner'
+  env:
+    JAVA_HOME: $(JAVA_HOME_17)
+    PATH: $(JAVA_HOME_17)\bin;$(PATH)
 
 # Publish Unit Test Results
 - task: PublishTestResults@2
@@ -94,3 +82,4 @@ steps:
     artifactName: 'dietplanner-artifacts'
     publishLocation: 'Container'
   displayName: 'Publish Build Artifacts'
+
