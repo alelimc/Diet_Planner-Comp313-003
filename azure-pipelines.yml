@@ -198,15 +198,17 @@ stages:
   jobs:
     - job: DevDeploy
       steps:
+        # Start API
         - task: CmdLine@2
           displayName: 'Start API on http://localhost:8081'
           inputs:
             script: |
               echo Starting API on http://localhost:8081...
               java -jar $(Pipeline.Workspace)/api-artifacts/dietplanner-api.jar > nul 2>&1 &
-              ping -n 6 127.0.0.1 > nul
+              ping -n 10 127.0.0.1 > nul
               echo ✅ API started successfully on http://localhost:8081
 
+        # Start UI
         - task: CmdLine@2
           displayName: 'Start UI on http://localhost:8082'
           inputs:
@@ -214,15 +216,24 @@ stages:
               echo Starting UI on http://localhost:8082...
               cd $(Pipeline.Workspace)/ui-artifacts
               start "" cmd /c "npm install && npm start"
-              ping -n 6 127.0.0.1 > nul
+              ping -n 10 127.0.0.1 > nul
               echo ✅ UI started successfully on http://localhost:8082
 
+        # Retry check for API with delay
         - task: CmdLine@2
-          displayName: 'Verify API is running'
+          displayName: 'Verify API is running (with retries)'
           inputs:
             script: |
-              curl --fail http://localhost:8081/actuator/health || echo ❌ API not responding
+              echo Checking if API is running...
+              for /L %%i in (1,1,10) do (
+                curl --fail http://localhost:8081/actuator/health && echo ✅ API is responding && exit /B 0
+                echo Attempt %%i failed. Retrying in 5 seconds...
+                timeout /t 5
+              )
+              echo ❌ API not responding after retries.
+              exit /B 1
 
+        # Verify UI is running
         - task: CmdLine@2
           displayName: 'Verify UI is running'
           inputs:
