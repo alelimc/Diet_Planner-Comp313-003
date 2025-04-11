@@ -69,18 +69,22 @@ stages:
         displayName: 'Build UI Project'
         inputs:
           script: |
-            cd Diet_Planner-Comp313-003 && mvn -B clean package
             mkdir $(Pipeline.Workspace)\ui-build
-            xcopy /s /e /y "target" "$(Pipeline.Workspace)\ui-build"
+            cd Diet_Planner-Comp313-003
+            mvn -B clean package -DoutputDirectory=$(Pipeline.Workspace)\ui-build
+            echo "✅ UI build complete. Contents of target:"
+            dir /s /b target
 
       # Build API Project
       - task: CmdLine@2
         displayName: 'Build API Project'
         inputs:
           script: |
-            cd DietPlanner_MealServiceAPI && mvn -B clean package
             mkdir $(Pipeline.Workspace)\api-build
-            xcopy /s /e /y "target" "$(Pipeline.Workspace)\api-build"
+            cd DietPlanner_MealServiceAPI
+            mvn -B clean package -DoutputDirectory=$(Pipeline.Workspace)\api-build
+            echo "✅ API build complete. Contents of target:"
+            dir /s /b target
 
       # Publish artifacts from outside repo directory
       - task: PublishPipelineArtifact@1
