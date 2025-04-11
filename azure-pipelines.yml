@@ -69,37 +69,49 @@ stages:
         displayName: 'Build UI Project'
         inputs:
           script: |
-            mkdir $(Pipeline.Workspace)\ui-build
             cd Diet_Planner-Comp313-003
-            mvn -B clean package -DoutputDirectory=$(Pipeline.Workspace)\ui-build
+            mvn -B clean package
             echo "✅ UI build complete. Contents of target:"
             dir /s /b target
+
+      # Copy UI build to artifact staging dir
+      - task: CopyFiles@2
+        displayName: 'Copy UI build to staging'
+        inputs:
+          SourceFolder: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
+          Contents: '**'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/ui-build'
 
       # Build API Project
       - task: CmdLine@2
         displayName: 'Build API Project'
         inputs:
           script: |
-            mkdir $(Pipeline.Workspace)\api-build
             cd DietPlanner_MealServiceAPI
-            mvn -B clean package -DoutputDirectory=$(Pipeline.Workspace)\api-build
+            mvn -B clean package
             echo "✅ API build complete. Contents of target:"
             dir /s /b target
 
-      # Publish artifacts from outside repo directory
+      # Copy API build to artifact staging dir
+      - task: CopyFiles@2
+        displayName: 'Copy API build to staging'
+        inputs:
+          SourceFolder: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
+          Contents: '**'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/api-build'
+
+      # Publish artifacts from outside repo directory CI Stage
       - task: PublishPipelineArtifact@1
         displayName: 'Publish UI Artifact'
         inputs:
-          targetPath: '$(Pipeline.Workspace)/ui-build'
+          targetPath: '$(Build.ArtifactStagingDirectory)/ui-build'
           artifactName: 'dietplanner-ui'
-          artifactType: 'pipeline'
 
       - task: PublishPipelineArtifact@1
         displayName: 'Publish API Artifact'
         inputs:
-          targetPath: '$(Pipeline.Workspace)/api-build'
+          targetPath: '$(Build.ArtifactStagingDirectory)/api-build'
           artifactName: 'dietplanner-api'
-          artifactType: 'pipeline'
 
       # Sonar Scanner (runs before checkout clean wipes target)
       - task: CmdLine@2
