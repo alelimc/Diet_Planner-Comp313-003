@@ -198,14 +198,13 @@ stages:
   jobs:
     - job: DevDeploy
       steps:
-        - task: PowerShell@2
+        - task: CmdLine@2
           displayName: 'Deploying to Dev Environment (localhost:8081)'
           inputs:
-            targetType: 'inline'
             script: |
-              Write-Host "Simulating deployment to Dev environment..."
-              Write-Host "Launching API and UI services on http://localhost:8081 and http://localhost:8082"
-              Start-Sleep -Seconds 3
+              echo Simulating deployment to Dev environment...
+              echo Launching API and UI services on http://localhost:8081 and http://localhost:8082
+              ping -n 4 127.0.0.1 > nul
 
 # -----------------------------------------
 # QAT Deployment (Mock)
@@ -217,13 +216,12 @@ stages:
   jobs:
     - job: QATDeploy
       steps:
-        - task: PowerShell@2
+        - task: CmdLine@2
           displayName: 'Mock QAT Deployment'
           inputs:
-            targetType: 'inline'
             script: |
-              Write-Host "Deploying to QAT environment..."
-              Start-Sleep -Seconds 2
+              echo Deploying to QAT environment...
+              ping -n 3 127.0.0.1 > nul
 
 # -----------------------------------------
 # Staging Deployment (Mock)
@@ -235,13 +233,12 @@ stages:
   jobs:
     - job: StagingDeploy
       steps:
-        - task: PowerShell@2
+        - task: CmdLine@2
           displayName: 'Mock Staging Deployment'
           inputs:
-            targetType: 'inline'
             script: |
-              Write-Host "Deploying to Staging environment..."
-              Start-Sleep -Seconds 2
+              echo Deploying to Staging environment...
+              ping -n 3 127.0.0.1 > nul
 
 # -----------------------------------------
 # Production Deployment (Mock)
@@ -253,10 +250,10 @@ stages:
   jobs:
     - job: ProdDeploy
       steps:
-        - task: PowerShell@2
+        - task: CmdLine@2
           displayName: 'Mock Production Deployment'
           inputs:
-            targetType: 'inline'
             script: |
-              Write-Host "Deploying to Production environment..."
-              Start-Sleep -Seconds 2
+              echo Deploying to Production environment...
+              ping -n 3 127.0.0.1 > nul
+
