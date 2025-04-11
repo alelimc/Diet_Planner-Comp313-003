@@ -198,7 +198,6 @@ stages:
   jobs:
     - job: DevDeploy
       steps:
-        # Start API
         - task: CmdLine@2
           displayName: 'Start API on http://localhost:8081'
           inputs:
@@ -208,7 +207,6 @@ stages:
               ping -n 6 127.0.0.1 > nul
               echo ✅ API started successfully on http://localhost:8081
 
-        # Start UI
         - task: CmdLine@2
           displayName: 'Start UI on http://localhost:8082'
           inputs:
@@ -219,7 +217,6 @@ stages:
               ping -n 6 127.0.0.1 > nul
               echo ✅ UI started successfully on http://localhost:8082
 
-        # Verify API and UI are up
         - task: CmdLine@2
           displayName: 'Verify API is running'
           inputs:
@@ -243,11 +240,12 @@ stages:
     - job: QATDeploy
       steps:
         - task: CmdLine@2
-          displayName: 'Mock QAT Deployment'
+          displayName: 'Simulating QAT Deployment'
           inputs:
             script: |
-              echo Deploying to QAT environment...
+              echo Simulating QAT environment deployment...
               ping -n 3 127.0.0.1 > nul
+              echo ✅ QAT Environment simulated successfully.
 
 # -----------------------------------------
 # Staging Deployment (Mock)
@@ -260,11 +258,12 @@ stages:
     - job: StagingDeploy
       steps:
         - task: CmdLine@2
-          displayName: 'Mock Staging Deployment'
+          displayName: 'Simulating Staging Deployment'
           inputs:
             script: |
-              echo Deploying to Staging environment...
+              echo Simulating Staging environment deployment...
               ping -n 3 127.0.0.1 > nul
+              echo ✅ Staging Environment simulated successfully.
 
 # -----------------------------------------
 # Production Deployment (Mock)
@@ -277,9 +276,10 @@ stages:
     - job: ProdDeploy
       steps:
         - task: CmdLine@2
-          displayName: 'Mock Production Deployment'
+          displayName: 'Simulating Production Deployment'
           inputs:
             script: |
-              echo Deploying to Production environment...
+              echo Simulating Production environment deployment...
               ping -n 3 127.0.0.1 > nul
+              echo ✅ Production Environment simulated successfully.
 
