@@ -19,7 +19,7 @@ variables:
   SONAR_JAVA_PATH: 'C:\Program Files\Java\jdk-17.0.14.7\bin\java.exe'  
   # Add these new variables (store the token in Azure DevOps secrets)
   SONARQUBE_URL: 'http://localhost:9000'  # Update with your SonarQube server URL
-  SONARQUBE_TOKEN: $(sonarqubeToken)  # Reference to secret variable
+
 steps:
 # Setup Environment with Path Verification
 - task: CmdLine@2
@@ -52,6 +52,9 @@ steps:
       
       echo Maven Version:
       mvn -version
+      
+      sonar-scanner -v
+
   env:
     PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
 
@@ -111,7 +114,8 @@ steps:
     JAVA_HOME: $(JAVA_HOME)
     MAVEN_HOME: $(MAVEN_HOME)
     PATH: $(SONAR_SCANNER_HOME)\bin;$(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
-
+    SONARQUBE_TOKEN: $(sonarqubeToken)  # Reference to secret variable
+    
 # Publish Test Results
 - task: PublishTestResults@2
   condition: succeededOrFailed()
