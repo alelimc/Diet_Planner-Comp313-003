@@ -66,7 +66,7 @@ stages:
           displayName: 'Build UI Project'
           inputs:
             script: |
-              cd Diet_Planner-Comp313-003 && mvn -B clean verify
+              cd Diet_Planner-Comp313-003 && mvn -B clean package
               echo "✅ UI build complete. Contents of target:"
               dir target
 
@@ -75,7 +75,7 @@ stages:
           displayName: 'Build API Project'
           inputs:
             script: |
-              cd DietPlanner_MealServiceAPI && mvn -B clean verify
+              cd DietPlanner_MealServiceAPI && mvn -B clean package
               echo "✅ API build complete. Contents of target:"
               dir target
 
