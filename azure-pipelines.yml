@@ -179,14 +179,14 @@ stages:
           displayName: 'Publish UI Artifact'
           inputs:
             PathtoPublish: '$(Pipeline.Workspace)/ui-artifacts'
-            ArtifactName: 'dietplanner-ui'
+            ArtifactName: 'dietplanner-ui-$(Build.BuildId)'
             publishLocation: 'Container'
 
         - task: PublishBuildArtifacts@1
           displayName: 'Publish API Artifact'
           inputs:
             PathtoPublish: '$(Pipeline.Workspace)/api-artifacts'
-            ArtifactName: 'dietplanner-api'
+            ArtifactName: 'dietplanner-api-$(Build.BuildId)'
             publishLocation: 'Container'
 
 # -----------------------------------------
