@@ -13,136 +13,192 @@ pool:
 
 variables:
   JAVA_HOME: 'C:\Program Files\Java\jdk-17.0.14.7'
-  MAVEN_HOME: 'C:\Apache\Maven'  
+  MAVEN_HOME: 'C:\Apache\Maven'
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
-  SONAR_SCANNER_HOME: 'C:\sonar-scanner-5.0.1.3006-windows' # Updated version
-  SONAR_JAVA_PATH: 'C:\Program Files\Java\jdk-17.0.14.7\bin\java.exe'  
-  # Add these new variables (store the token in Azure DevOps secrets)
-  SONARQUBE_URL: 'http://localhost:9000'  # Update with your SonarQube server URL
+  SONAR_SCANNER_HOME: 'C:\sonar-scanner-5.0.1.3006-windows'
+  SONAR_JAVA_PATH: 'C:\Program Files\Java\jdk-17.0.14.7\bin\java.exe'
+  SONARQUBE_URL: 'http://localhost:9000'
 
-steps:
-# Setup Environment with Path Verification
-- task: CmdLine@2
-  displayName: 'Setup and Verify Environment'
-  inputs:
-    script: |
-      echo JAVA_HOME=%JAVA_HOME%
-      echo MAVEN_HOME=%MAVEN_HOME%
-      echo ##vso[task.prependpath]%SONAR_SCANNER_HOME%\bin
+stages:
 
-      REM Verify Java installation
-      if not exist "%JAVA_HOME%\bin\java.exe" (
-        echo Error: Java not found at %JAVA_HOME%\bin\java.exe
-        exit /b 1
-      )
-      
-      REM Verify Maven installation
-      if not exist "%MAVEN_HOME%\bin\mvn.cmd" (
-        echo Error: Maven not found at %MAVEN_HOME%\bin\mvn.cmd
-        exit /b 1
-      )
-      
-      echo ##vso[task.setvariable variable=JAVA_HOME]%JAVA_HOME%
-      echo ##vso[task.setvariable variable=MAVEN_HOME]%MAVEN_HOME%
-      echo ##vso[task.prependpath]%JAVA_HOME%\bin
-      echo ##vso[task.prependpath]%MAVEN_HOME%\bin
-      
-      echo Java Version:
-      java -version
-      
-      echo Maven Version:
-      mvn -version
-      
-      sonar-scanner -v
+# -----------------------------------------
+# CI Stage
+# -----------------------------------------
+- stage: CI
+  displayName: 'Continuous Integration'
+  jobs:
+    - job: BuildAndTest
+      displayName: 'Build and Test'
+      steps:
 
-  env:
-    PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
+        # Setup Environment
+        - task: CmdLine@2
+          displayName: 'Setup and Verify Environment'
+          inputs:
+            script: |
+              echo JAVA_HOME=%JAVA_HOME%
+              echo MAVEN_HOME=%MAVEN_HOME%
+              echo ##vso[task.prependpath]%SONAR_SCANNER_HOME%\bin
 
-# Build UI Project
-- task: CmdLine@2
-  displayName: 'Build UI Project'
-  inputs:
-    script: |
-      cd Diet_Planner-Comp313-003
-      mvn clean verify
-  env:
-    JAVA_HOME: $(JAVA_HOME)
-    MAVEN_HOME: $(MAVEN_HOME)
-    PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
+              if not exist "%JAVA_HOME%\bin\java.exe" (
+                echo Error: Java not found.
+                exit /b 1
+              )
 
-# Build API Project
-- task: CmdLine@2
-  displayName: 'Build API Project'
-  inputs:
-    script: |
-      cd DietPlanner_MealServiceAPI
-      mvn clean verify
-  env:
-    JAVA_HOME: $(JAVA_HOME)
-    MAVEN_HOME: $(MAVEN_HOME)
-    PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
+              if not exist "%MAVEN_HOME%\bin\mvn.cmd" (
+                echo Error: Maven not found.
+                exit /b 1
+              )
 
-# SonarQube Analysis
-- task: CmdLine@2
-  displayName: 'Verify SonarScanner'
-  inputs:
-    script: |
-      echo SONAR_SCANNER_HOME=%SONAR_SCANNER_HOME%
-      dir "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat"
-      "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat" -v
-      echo Java being used by SonarScanner:
-      "%SONAR_JAVA_PATH%" -version
-      echo SonarScanner version:
-      sonar-scanner -v
-- task: CmdLine@2
-  displayName: 'Run SonarQube Scanner'
-  inputs:
-    script: |
-      set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
-      "C:\sonar-scanner-5.0.1.3006-windows\bin\sonar-scanner.bat" ^
-        -Dsonar.host.url=%SONARQUBE_URL% ^
-        -Dsonar.login=%SONARQUBE_TOKEN% ^
-        -Dsonar.projectKey=dietplanner ^
-        -Dsonar.projectName="Diet Planner App" ^
-        -Dsonar.sources=. ^
-        -Dsonar.java.binaries=**/target/classes ^
-        -Dsonar.sourceEncoding=UTF-8 ^
-        -Dsonar.java.source=17 ^
-        -Dsonar.java.version=17        
-        -X
-  env:
-    JAVA_HOME: $(JAVA_HOME)
-    MAVEN_HOME: $(MAVEN_HOME)
-    PATH: $(SONAR_SCANNER_HOME)\bin;$(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
-    SONARQUBE_TOKEN: $(sonarqubeTokenPAT)  # Reference to secret variable
+              echo ##vso[task.setvariable variable=JAVA_HOME]%JAVA_HOME%
+              echo ##vso[task.setvariable variable=MAVEN_HOME]%MAVEN_HOME%
+              echo ##vso[task.prependpath]%JAVA_HOME%\bin
+              echo ##vso[task.prependpath]%MAVEN_HOME%\bin
 
-# Publish Test Results
-- task: PublishTestResults@2
-  condition: succeededOrFailed()
-  inputs:
-    testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
-    testRunTitle: 'Java Unit Tests'
-  displayName: 'Publish Test Results'
+              java -version
+              mvn -version
+              sonar-scanner -v
+          env:
+            PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
 
-# Publish Code Coverage
-- task: PublishCodeCoverageResults@1
-  inputs:
-    codeCoverageTool: 'JaCoCo'
-    summaryFileLocation: '**/target/site/jacoco/jacoco.xml'
-    reportDirectory: '**/target/site/jacoco'
-  displayName: 'Publish Code Coverage'
+        # Build UI
+        - task: CmdLine@2
+          displayName: 'Build UI Project'
+          inputs:
+            script: |
+              cd Diet_Planner-Comp313-003
+              mvn clean verify
 
-# Publish Artifacts
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Build Artifacts'
-  inputs:
-    PathtoPublish: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
-    ArtifactName: 'dietplanner-ui'
-    publishLocation: 'Container'
-    
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish API Artifacts'
-  inputs:
-    PathtoPublish: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
-    ArtifactName: 'dietplanner-api'
-    publishLocation: 'Container'
+        # Build API
+        - task: CmdLine@2
+          displayName: 'Build API Project'
+          inputs:
+            script: |
+              cd DietPlanner_MealServiceAPI
+              mvn clean verify
+
+        # Sonar Scanner
+        - task: CmdLine@2
+          displayName: 'Run SonarQube Scanner'
+          inputs:
+            script: |
+              set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
+              "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat" ^
+                -Dsonar.host.url=%SONARQUBE_URL% ^
+                -Dsonar.login=%SONARQUBE_TOKEN% ^
+                -Dsonar.projectKey=dietplanner ^
+                -Dsonar.projectName="Diet Planner App" ^
+                -Dsonar.sources=. ^
+                -Dsonar.java.binaries=**/target/classes ^
+                -Dsonar.sourceEncoding=UTF-8 ^
+                -Dsonar.java.source=17 ^
+                -Dsonar.java.version=17 ^
+                -X
+          env:
+            JAVA_HOME: $(JAVA_HOME)
+            MAVEN_HOME: $(MAVEN_HOME)
+            PATH: $(SONAR_SCANNER_HOME)\bin;$(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
+            SONARQUBE_TOKEN: $(sonarqubeTokenPAT)
+
+        # Unit Test Results
+        - task: PublishTestResults@2
+          inputs:
+            testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+            testRunTitle: 'Java Unit Tests'
+
+        # Code Coverage
+        - task: PublishCodeCoverageResults@1
+          inputs:
+            codeCoverageTool: 'JaCoCo'
+            summaryFileLocation: '**/target/site/jacoco/jacoco.xml'
+            reportDirectory: '**/target/site/jacoco'
+
+# -----------------------------------------
+# Deliver Stage - Archive Artifacts
+# -----------------------------------------
+- stage: Deliver
+  displayName: 'Deliver Artifacts'
+  dependsOn: CI
+  jobs:
+    - job: Archive
+      steps:
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish UI Artifact'
+          inputs:
+            PathtoPublish: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
+            ArtifactName: 'dietplanner-ui'
+
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish API Artifact'
+          inputs:
+            PathtoPublish: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
+            ArtifactName: 'dietplanner-api'
+
+# -----------------------------------------
+# Deploy to Dev Environment (Mocked App Run)
+# -----------------------------------------
+- stage: DeployToDev
+  displayName: 'Deploy to Development Environment'
+  dependsOn: Deliver
+  jobs:
+    - job: DevDeploy
+      steps:
+        - task: CmdLine@2
+          displayName: 'Deploying to Dev Environment (localhost:8081)'
+          inputs:
+            script: |
+              echo Simulating deployment to Dev environment...
+              echo Launching API and UI services on http://localhost:8081 and http://localhost:8082
+              timeout /t 3
+
+# -----------------------------------------
+# QAT Deployment (Mock)
+# -----------------------------------------
+- stage: DeployToQAT
+  displayName: 'Deploy to QAT Environment'
+  dependsOn: DeployToDev
+  condition: succeeded()
+  jobs:
+    - job: QATDeploy
+      steps:
+        - task: CmdLine@2
+          displayName: 'Mock QAT Deployment'
+          inputs:
+            script: |
+              echo Deploying to QAT environment...
+              timeout /t 2
+
+# -----------------------------------------
+# Staging Deployment (Mock)
+# -----------------------------------------
+- stage: DeployToStaging
+  displayName: 'Deploy to Staging Environment'
+  dependsOn: DeployToQAT
+  condition: succeeded()
+  jobs:
+    - job: StagingDeploy
+      steps:
+        - task: CmdLine@2
+          displayName: 'Mock Staging Deployment'
+          inputs:
+            script: |
+              echo Deploying to Staging environment...
+              timeout /t 2
+
+# -----------------------------------------
+# Production Deployment (Mock)
+# -----------------------------------------
+- stage: DeployToProd
+  displayName: 'Deploy to Production Environment'
+  dependsOn: DeployToStaging
+  condition: succeeded()
+  jobs:
+    - job: ProdDeploy
+      steps:
+        - task: CmdLine@2
+          displayName: 'Mock Production Deployment'
+          inputs:
+            script: |
+              echo Deploying to Production environment...
+              timeout /t 2
+
