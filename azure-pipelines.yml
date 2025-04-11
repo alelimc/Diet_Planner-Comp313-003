@@ -122,19 +122,42 @@ stages:
   jobs:
     - job: Archive
       steps:
+        # Check if UI Artifact folder exists
+        - task: CmdLine@2
+          displayName: 'Verify UI Artifact Folder Exists'
+          inputs:
+            script: |
+              if not exist "$(System.DefaultWorkingDirectory)\Diet_Planner-Comp313-003\target" (
+                echo UI artifact path not found!
+                dir $(System.DefaultWorkingDirectory)\Diet_Planner-Comp313-003
+                exit /b 1
+              )
+
         - task: PublishBuildArtifacts@1
           displayName: 'Publish UI Artifact'
           inputs:
-            PathtoPublish: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
+            PathtoPublish: '$(System.DefaultWorkingDirectory)\Diet_Planner-Comp313-003\target'
             ArtifactName: 'dietplanner-ui'
-            publishLocation: 'Container'
+            publishLocation: 'container'
+
+        # Check if API Artifact folder exists
+        - task: CmdLine@2
+          displayName: 'Verify API Artifact Folder Exists'
+          inputs:
+            script: |
+              if not exist "$(System.DefaultWorkingDirectory)\DietPlanner_MealServiceAPI\target" (
+                echo API artifact path not found!
+                dir $(System.DefaultWorkingDirectory)\DietPlanner_MealServiceAPI
+                exit /b 1
+              )
 
         - task: PublishBuildArtifacts@1
           displayName: 'Publish API Artifact'
           inputs:
-            PathtoPublish: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
+            PathtoPublish: '$(System.DefaultWorkingDirectory)\DietPlanner_MealServiceAPI\target'
             ArtifactName: 'dietplanner-api'
-            publishLocation: 'Container'
+            publishLocation: 'container'
+
             
 # -----------------------------------------
 # Deploy to Dev Environment (Mocked App Run)
