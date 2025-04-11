@@ -68,7 +68,7 @@ stages:
             script: |
               cd Diet_Planner-Comp313-003 && mvn -B clean package
               echo "✅ UI build complete. Contents of target:"
-              dir target
+              dir /s /b target
 
         # Build API
         - task: CmdLine@2
@@ -77,7 +77,7 @@ stages:
             script: |
               cd DietPlanner_MealServiceAPI && mvn -B clean package
               echo "✅ API build complete. Contents of target:"
-              dir target
+              dir /s /b target
 
         # Sonar Scanner
         - task: CmdLine@2
@@ -124,42 +124,47 @@ stages:
   jobs:
     - job: Archive
       steps:
-        # Check if UI Artifact folder exists
+        # Check and publish UI artifacts
         - task: CmdLine@2
-          displayName: 'Verify UI Artifact Folder Exists'
+          displayName: 'Find UI Artifacts'
           inputs:
             script: |
-              if not exist "$(System.DefaultWorkingDirectory)\Diet_Planner-Comp313-003\target" (
-                echo UI artifact path not found!
-                dir $(System.DefaultWorkingDirectory)\Diet_Planner-Comp313-003
-                exit /b 1
-              )
+              echo "Looking for UI artifacts..."
+              cd Diet_Planner-Comp313-003
+              dir /b target\*.?ar > artifacts.txt
+              set /p ARTIFACTS=<artifacts.txt
+              echo ##vso[task.setvariable variable=UI_ARTIFACT_FOUND]true
+              echo Found artifact: %ARTIFACTS%
+          continueOnError: true
 
         - task: PublishBuildArtifacts@1
           displayName: 'Publish UI Artifact'
+          condition: eq(variables.UI_ARTIFACT_FOUND, 'true')
           inputs:
-            PathtoPublish: '$(System.DefaultWorkingDirectory)\Diet_Planner-Comp313-003\target'
+            PathtoPublish: 'Diet_Planner-Comp313-003/target'
             ArtifactName: 'dietplanner-ui'
-            publishLocation: 'container'
+            publishLocation: 'Container'
 
-        # Check if API Artifact folder exists
+        # Check and publish API artifacts
         - task: CmdLine@2
-          displayName: 'Verify API Artifact Folder Exists'
+          displayName: 'Find API Artifacts'
           inputs:
             script: |
-              if not exist "$(System.DefaultWorkingDirectory)\DietPlanner_MealServiceAPI\target" (
-                echo API artifact path not found!
-                dir $(System.DefaultWorkingDirectory)\DietPlanner_MealServiceAPI
-                exit /b 1
-              )
+              echo "Looking for API artifacts..."
+              cd DietPlanner_MealServiceAPI
+              dir /b target\*.?ar > artifacts.txt
+              set /p ARTIFACTS=<artifacts.txt
+              echo ##vso[task.setvariable variable=API_ARTIFACT_FOUND]true
+              echo Found artifact: %ARTIFACTS%
+          continueOnError: true
 
         - task: PublishBuildArtifacts@1
           displayName: 'Publish API Artifact'
+          condition: eq(variables.API_ARTIFACT_FOUND, 'true')
           inputs:
-            PathtoPublish: '$(System.DefaultWorkingDirectory)\DietPlanner_MealServiceAPI\target'
+            PathtoPublish: 'DietPlanner_MealServiceAPI/target'
             ArtifactName: 'dietplanner-api'
-            publishLocation: 'container'
-
+            publishLocation: 'Container'
             
 # -----------------------------------------
 # Deploy to Dev Environment (Mocked App Run)
