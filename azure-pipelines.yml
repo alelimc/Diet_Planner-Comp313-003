@@ -134,8 +134,15 @@ steps:
 
 # Publish Artifacts
 - task: PublishBuildArtifacts@1
-  inputs:
-    pathToPublish: '**/target/*.?ar'
-    artifactName: 'dietplanner-artifacts'
-    publishLocation: 'Container'
   displayName: 'Publish Build Artifacts'
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/Diet_Planner-Comp313-003/target'
+    ArtifactName: 'dietplanner-ui'
+    publishLocation: 'Container'
+    
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish API Artifacts'
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/DietPlanner_MealServiceAPI/target'
+    ArtifactName: 'dietplanner-api'
+    publishLocation: 'Container'
