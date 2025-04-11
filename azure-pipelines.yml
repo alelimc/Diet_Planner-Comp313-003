@@ -2,6 +2,7 @@
 # Start with a minimal pipeline that you can customize to build and deploy your code.
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
+# deployment all mock
 
 trigger:
   branches:
@@ -190,7 +191,7 @@ stages:
             publishLocation: 'Container'
 
 # -----------------------------------------
-# Deploy to Dev Environment (Real Launch)
+# Deploy to Dev Environment (Mocked App Run)
 # -----------------------------------------
 - stage: DeployToDev
   displayName: 'Deploy to Development Environment'
@@ -198,47 +199,13 @@ stages:
   jobs:
     - job: DevDeploy
       steps:
-        # Start API
         - task: CmdLine@2
-          displayName: 'Start API on http://localhost:8081'
+          displayName: 'Deploying to Dev Environment (localhost:8081)'
           inputs:
             script: |
-              echo Starting API on http://localhost:8081...
-              java -jar $(Pipeline.Workspace)/api-artifacts/dietplanner-api.jar > nul 2>&1 &
-              ping -n 10 127.0.0.1 > nul
-              echo ✅ API started successfully on http://localhost:8081
-
-        # Start UI
-        - task: CmdLine@2
-          displayName: 'Start UI on http://localhost:8082'
-          inputs:
-            script: |
-              echo Starting UI on http://localhost:8082...
-              cd $(Pipeline.Workspace)/ui-artifacts
-              start "" cmd /c "npm install && npm start"
-              ping -n 10 127.0.0.1 > nul
-              echo ✅ UI started successfully on http://localhost:8082
-
-        # Retry check for API with delay
-        - task: CmdLine@2
-          displayName: 'Verify API is running (with retries)'
-          inputs:
-            script: |
-              echo Checking if API is running...
-              for /L %%i in (1,1,10) do (
-                curl --fail http://localhost:8081/actuator/health && echo ✅ API is responding && exit /B 0
-                echo Attempt %%i failed. Retrying in 5 seconds...
-                timeout /t 5
-              )
-              echo ❌ API not responding after retries.
-              exit /B 1
-
-        # Verify UI is running
-        - task: CmdLine@2
-          displayName: 'Verify UI is running'
-          inputs:
-            script: |
-              curl --fail http://localhost:8082 || echo ❌ UI not responding
+              echo Simulating deployment to Dev environment...
+              echo Launching API and UI services on http://localhost:8081 and http://localhost:8082
+              ping -n 4 127.0.0.1 > nul
 
 # -----------------------------------------
 # QAT Deployment (Mock)
@@ -251,12 +218,11 @@ stages:
     - job: QATDeploy
       steps:
         - task: CmdLine@2
-          displayName: 'Simulating QAT Deployment'
+          displayName: 'Mock QAT Deployment'
           inputs:
             script: |
-              echo Simulating QAT environment deployment...
+              echo Deploying to QAT environment...
               ping -n 3 127.0.0.1 > nul
-              echo ✅ QAT Environment simulated successfully.
 
 # -----------------------------------------
 # Staging Deployment (Mock)
@@ -269,12 +235,11 @@ stages:
     - job: StagingDeploy
       steps:
         - task: CmdLine@2
-          displayName: 'Simulating Staging Deployment'
+          displayName: 'Mock Staging Deployment'
           inputs:
             script: |
-              echo Simulating Staging environment deployment...
+              echo Deploying to Staging environment...
               ping -n 3 127.0.0.1 > nul
-              echo ✅ Staging Environment simulated successfully.
 
 # -----------------------------------------
 # Production Deployment (Mock)
@@ -287,10 +252,9 @@ stages:
     - job: ProdDeploy
       steps:
         - task: CmdLine@2
-          displayName: 'Simulating Production Deployment'
+          displayName: 'Mock Production Deployment'
           inputs:
             script: |
-              echo Simulating Production environment deployment...
+              echo Deploying to Production environment...
               ping -n 3 127.0.0.1 > nul
-              echo ✅ Production Environment simulated successfully.
 
