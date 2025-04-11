@@ -17,7 +17,9 @@ variables:
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
   SONAR_SCANNER_HOME: 'C:\sonar-scanner-5.0.1.3006-windows' # Updated version
   SONAR_JAVA_PATH: 'C:\Program Files\Java\jdk-17.0.14.7\bin\java.exe'  
-
+  # Add these new variables (store the token in Azure DevOps secrets)
+  SONARQUBE_URL: 'http://localhost:9000'  # Update with your SonarQube server URL
+  SONARQUBE_TOKEN: $(sonarqubeToken)  # Reference to secret variable
 steps:
 # Setup Environment with Path Verification
 - task: CmdLine@2
@@ -95,6 +97,8 @@ steps:
     script: |
       set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
       "C:\sonar-scanner-5.0.1.3006-windows\bin\sonar-scanner.bat" ^
+        -Dsonar.host.url=%SONARQUBE_URL% ^
+        -Dsonar.login=%SONARQUBE_TOKEN% ^
         -Dsonar.projectKey=dietplanner ^
         -Dsonar.projectName="Diet Planner App" ^
         -Dsonar.sources=. ^
@@ -102,7 +106,7 @@ steps:
         -Dsonar.sourceEncoding=UTF-8 ^
         -Dsonar.java.source=17 ^
         -Dsonar.java.version=17        
-
+        -X
   env:
     JAVA_HOME: $(JAVA_HOME)
     MAVEN_HOME: $(MAVEN_HOME)
