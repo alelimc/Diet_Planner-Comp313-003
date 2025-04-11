@@ -13,23 +13,42 @@ pool:
 
 variables:
   JAVA_HOME: 'C:\Program Files\Java\jdk-17.0.14.7'
-  MAVEN_HOME: 'C:\Apache\Maven\bin'  # Update with your Maven path
+  MAVEN_HOME: 'C:\Apache\Maven'  # Should NOT include \bin
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
 
 steps:
-# Setup Environment
+# Setup Environment with Path Verification
 - task: CmdLine@2
-  displayName: 'Setup Environment'
+  displayName: 'Setup and Verify Environment'
   inputs:
     script: |
-      echo Setting JAVA_HOME to %JAVA_HOME%
-      echo Setting MAVEN_HOME to %MAVEN_HOME%
+      echo JAVA_HOME=%JAVA_HOME%
+      echo MAVEN_HOME=%MAVEN_HOME%
+      
+      REM Verify Java installation
+      if not exist "%JAVA_HOME%\bin\java.exe" (
+        echo Error: Java not found at %JAVA_HOME%\bin\java.exe
+        exit /b 1
+      )
+      
+      REM Verify Maven installation
+      if not exist "%MAVEN_HOME%\bin\mvn.cmd" (
+        echo Error: Maven not found at %MAVEN_HOME%\bin\mvn.cmd
+        exit /b 1
+      )
+      
       echo ##vso[task.setvariable variable=JAVA_HOME]%JAVA_HOME%
       echo ##vso[task.setvariable variable=MAVEN_HOME]%MAVEN_HOME%
       echo ##vso[task.prependpath]%JAVA_HOME%\bin
       echo ##vso[task.prependpath]%MAVEN_HOME%\bin
+      
+      echo Java Version:
       java -version
+      
+      echo Maven Version:
       mvn -version
+  env:
+    PATH: $(JAVA_HOME)\bin;$(MAVEN_HOME)\bin;$(PATH)
 
 # Build UI Project
 - task: CmdLine@2
