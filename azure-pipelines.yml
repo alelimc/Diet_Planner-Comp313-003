@@ -16,46 +16,51 @@ variables:
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
 
 steps:
-
-# Java Setup
-- powershell: |
-    $env:PATH += ";C:\Windows\System32\WindowsPowerShell\v1.0\"
-    $javaHome = "$env:JAVA_HOME"
-    Write-Host "Setting JAVA_HOME to $javaHome"
-    Write-Host "##vso[task.setvariable variable=JAVA_HOME]$javaHome"
-    Write-Host "##vso[task.prependpath]$javaHome\bin"
-    & "$javaHome\bin\java" -version
-    mvn -version
+# Java Setup using CMD syntax
+- task: CmdLine@2
   displayName: 'Setup Java 17 Environment'
+  inputs:
+    script: |
+      echo Setting JAVA_HOME to %JAVA_HOME%
+      echo ##vso[task.setvariable variable=JAVA_HOME]%JAVA_HOME%
+      echo ##vso[task.prependpath]%JAVA_HOME%\bin
+      "%JAVA_HOME%\bin\java" -version
+      mvn -version
 
 # Build UI Project
-- script: |
-    cd Diet_Planner-Comp313-003
-    mvn clean verify
+- task: CmdLine@2
   displayName: 'Build UI Project'
+  inputs:
+    script: |
+      cd Diet_Planner-Comp313-003
+      mvn clean verify
   env:
     JAVA_HOME: $(JAVA_HOME)
     PATH: $(JAVA_HOME)\bin;$(PATH)
 
 # Build API Project
-- script: |
-    cd DietPlanner_MealServiceAPI
-    mvn clean verify
+- task: CmdLine@2
   displayName: 'Build API Project'
+  inputs:
+    script: |
+      cd DietPlanner_MealServiceAPI
+      mvn clean verify
   env:
     JAVA_HOME: $(JAVA_HOME)
     PATH: $(JAVA_HOME)\bin;$(PATH)
 
-# ✅ Manual SonarQube Analysis
-- script: |
-    sonar-scanner ^
-      -Dsonar.projectKey=dietplanner ^
-      -Dsonar.projectName="Diet Planner App" ^
-      -Dsonar.sources=. ^
-      -Dsonar.java.binaries=**/target/classes ^
-      -Dsonar.sourceEncoding=UTF-8 ^
-      -Dsonar.java.source=17
+# SonarQube Analysis
+- task: CmdLine@2
   displayName: 'Run SonarQube Scanner'
+  inputs:
+    script: |
+      sonar-scanner ^
+        -Dsonar.projectKey=dietplanner ^
+        -Dsonar.projectName="Diet Planner App" ^
+        -Dsonar.sources=. ^
+        -Dsonar.java.binaries=**/target/classes ^
+        -Dsonar.sourceEncoding=UTF-8 ^
+        -Dsonar.java.source=17
   env:
     JAVA_HOME: $(JAVA_HOME)
     PATH: $(JAVA_HOME)\bin;$(PATH)
@@ -83,4 +88,3 @@ steps:
     artifactName: 'dietplanner-artifacts'
     publishLocation: 'Container'
   displayName: 'Publish Build Artifacts'
-
