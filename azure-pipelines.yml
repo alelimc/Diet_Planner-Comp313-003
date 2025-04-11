@@ -198,13 +198,14 @@ stages:
   jobs:
     - job: DevDeploy
       steps:
-        - task: CmdLine@2
+        - task: PowerShell@2
           displayName: 'Deploying to Dev Environment (localhost:8081)'
           inputs:
+            targetType: 'inline'
             script: |
-              echo Simulating deployment to Dev environment...
-              echo Launching API and UI services on http://localhost:8081 and http://localhost:8082
-              timeout /t 3
+              Write-Host "Simulating deployment to Dev environment..."
+              Write-Host "Launching API and UI services on http://localhost:8081 and http://localhost:8082"
+              Start-Sleep -Seconds 3
 
 # -----------------------------------------
 # QAT Deployment (Mock)
@@ -216,12 +217,13 @@ stages:
   jobs:
     - job: QATDeploy
       steps:
-        - task: CmdLine@2
+        - task: PowerShell@2
           displayName: 'Mock QAT Deployment'
           inputs:
+            targetType: 'inline'
             script: |
-              echo Deploying to QAT environment...
-              timeout /t 2
+              Write-Host "Deploying to QAT environment..."
+              Start-Sleep -Seconds 2
 
 # -----------------------------------------
 # Staging Deployment (Mock)
@@ -233,12 +235,13 @@ stages:
   jobs:
     - job: StagingDeploy
       steps:
-        - task: CmdLine@2
+        - task: PowerShell@2
           displayName: 'Mock Staging Deployment'
           inputs:
+            targetType: 'inline'
             script: |
-              echo Deploying to Staging environment...
-              timeout /t 2
+              Write-Host "Deploying to Staging environment..."
+              Start-Sleep -Seconds 2
 
 # -----------------------------------------
 # Production Deployment (Mock)
@@ -250,9 +253,10 @@ stages:
   jobs:
     - job: ProdDeploy
       steps:
-        - task: CmdLine@2
+        - task: PowerShell@2
           displayName: 'Mock Production Deployment'
           inputs:
+            targetType: 'inline'
             script: |
-              echo Deploying to Production environment...
-              timeout /t 2
+              Write-Host "Deploying to Production environment..."
+              Start-Sleep -Seconds 2
