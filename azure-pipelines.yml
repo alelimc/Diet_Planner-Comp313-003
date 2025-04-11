@@ -10,21 +10,23 @@ trigger:
       - feature/*
 
 pool:
-  name: project-selfhosted-agent  # Your self-hosted agent pool name
+  name: project-selfhosted-agent 
 
 variables:
-  JAVA_HOME: 'C:\\Program Files\\Java\\jdk-17'  # Changed to JDK 17
+  JAVA_HOME_17: 'C:\\Program Files\\Java\\jdk-17.0.x'  # Update with exact JDK 17 version
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
 
 steps:
-# Set Java 17 environment
-- script: |
-    echo "Setting Java 17 environment..."
-    set JAVA_HOME=C:\Program Files\Java\jdk-17.0.14.7
-    set PATH=%JAVA_HOME%\bin;%PATH%
+# Robust Java environment setup
+- powershell: |
+    Write-Host "##vso[task.setvariable variable=JAVA_HOME]$env:JAVA_HOME_17"
+    Write-Host "##vso[task.prependpath]$env:JAVA_HOME_17\bin"
+    Write-Host "Java version:"
     java -version
+    Write-Host "Maven version:"
     mvn -version
-  displayName: 'Setup Java 17 & Maven'
+  displayName: 'Setup Java 17 Environment'
+  failOnStderr: true
 
 # SonarQube Preparation
 - task: SonarQubePrepare@5
@@ -45,18 +47,22 @@ steps:
   displayName: 'SonarQube Prepare'
 
 # Build UI project with Sonar analysis
-- script: |
-    echo "Building Diet Planner UI..."
+- powershell: |
     cd Diet_Planner-Comp313-003
     mvn clean verify sonar:sonar -Dsonar.java.source=17
   displayName: 'Build UI Project with Sonar'
+  env:
+    JAVA_HOME: $(JAVA_HOME_17)
+    PATH: $(JAVA_HOME_17)\bin;$(PATH)
 
 # Build API project with Sonar analysis
-- script: |
-    echo "Building Meal Service API..."
+- powershell: |
     cd DietPlanner_MealServiceAPI
     mvn clean verify sonar:sonar -Dsonar.java.source=17
   displayName: 'Build API Project with Sonar'
+  env:
+    JAVA_HOME: $(JAVA_HOME_17)
+    PATH: $(JAVA_HOME_17)\bin;$(PATH)
 
 # SonarQube Analysis
 - task: SonarQubeAnalyze@5
