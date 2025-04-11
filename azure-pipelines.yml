@@ -41,6 +41,7 @@ steps:
       sonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
       sonar.java.source=17
       sonar.java.binaries=**/target/classes
+      sonar.branch.name="" # ADD THIS LINE TO AVOID BRANCH ANALYSIS      
   displayName: 'Prepare SonarQube Analysis'
 
 # Build UI Project
