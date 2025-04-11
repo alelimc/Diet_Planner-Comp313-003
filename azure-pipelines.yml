@@ -12,10 +12,11 @@ pool:
   name: project-selfhosted-agent
 
 variables:
-  SONAR_SCANNER_HOME: 'C:\sonar-scanner-4.8.1.3023-windows'
   JAVA_HOME: 'C:\Program Files\Java\jdk-17.0.14.7'
-  MAVEN_HOME: 'C:\Apache\Maven'  # Should NOT include \bin
+  MAVEN_HOME: 'C:\Apache\Maven'  
   MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
+  SONAR_SCANNER_HOME: 'C:\sonar-scanner-4.8.1.3023-windows'
+  SONAR_JAVA_PATH: 'C:\Program Files\Java\jdk-17.0.14.7\bin\java.exe'  
 
 steps:
 # Setup Environment with Path Verification
@@ -84,17 +85,24 @@ steps:
       echo SONAR_SCANNER_HOME=%SONAR_SCANNER_HOME%
       dir "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat"
       "%SONAR_SCANNER_HOME%\bin\sonar-scanner.bat" -v
+      echo Java being used by SonarScanner:
+      "%SONAR_JAVA_PATH%" -version
+      echo SonarScanner version:
+      sonar-scanner -v
 - task: CmdLine@2
   displayName: 'Run SonarQube Scanner'
   inputs:
     script: |
+      set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
       "C:\sonar-scanner-4.8.1.3023-windows\bin\sonar-scanner.bat" ^
         -Dsonar.projectKey=dietplanner ^
         -Dsonar.projectName="Diet Planner App" ^
         -Dsonar.sources=. ^
         -Dsonar.java.binaries=**/target/classes ^
         -Dsonar.sourceEncoding=UTF-8 ^
-        -Dsonar.java.source=17
+        -Dsonar.java.source=17 ^
+        -Dsonar.java.version=17        
+
   env:
     JAVA_HOME: $(JAVA_HOME)
     MAVEN_HOME: $(MAVEN_HOME)
