@@ -94,7 +94,7 @@ steps:
   inputs:
     script: |
       set SONAR_SCANNER_OPTS=-Djava.executable="%SONAR_JAVA_PATH%"
-      "C:\sonar-scanner-4.8.1.3023-windows\bin\sonar-scanner.bat" ^
+      "C:\sonar-scanner-5.0.1.3006-windows\bin\sonar-scanner.bat" ^
         -Dsonar.projectKey=dietplanner ^
         -Dsonar.projectName="Diet Planner App" ^
         -Dsonar.sources=. ^
