@@ -105,13 +105,13 @@ stages:
         displayName: 'Publish UI Artifact'
         inputs:
           targetPath: '$(Build.ArtifactStagingDirectory)/ui-build'
-          artifactName: 'dietplanner-ui'
+          artifactName: 'dietplanner-ui-$(Build.BuildId)'
 
       - task: PublishPipelineArtifact@1
         displayName: 'Publish API Artifact'
         inputs:
           targetPath: '$(Build.ArtifactStagingDirectory)/api-build'
-          artifactName: 'dietplanner-api'
+          artifactName: 'dietplanner-api-$(Build.BuildId)'
 
       # Sonar Scanner (runs before checkout clean wipes target)
       - task: CmdLine@2
