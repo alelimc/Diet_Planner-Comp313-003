@@ -190,7 +190,7 @@ stages:
             publishLocation: 'Container'
 
 # -----------------------------------------
-# Deploy to Dev Environment (Mocked App Run)
+# Deploy to Dev Environment (Real Launch)
 # -----------------------------------------
 - stage: DeployToDev
   displayName: 'Deploy to Development Environment'
@@ -198,13 +198,39 @@ stages:
   jobs:
     - job: DevDeploy
       steps:
+        # Start API
         - task: CmdLine@2
-          displayName: 'Deploying to Dev Environment (localhost:8081)'
+          displayName: 'Start API on http://localhost:8081'
           inputs:
             script: |
-              echo Simulating deployment to Dev environment...
-              echo Launching API and UI services on http://localhost:8081 and http://localhost:8082
-              ping -n 4 127.0.0.1 > nul
+              echo Starting API on http://localhost:8081...
+              java -jar $(Pipeline.Workspace)/api-artifacts/dietplanner-api.jar > nul 2>&1 &
+              ping -n 6 127.0.0.1 > nul
+              echo ✅ API started successfully on http://localhost:8081
+
+        # Start UI
+        - task: CmdLine@2
+          displayName: 'Start UI on http://localhost:8082'
+          inputs:
+            script: |
+              echo Starting UI on http://localhost:8082...
+              cd $(Pipeline.Workspace)/ui-artifacts
+              start "" cmd /c "npm install && npm start"
+              ping -n 6 127.0.0.1 > nul
+              echo ✅ UI started successfully on http://localhost:8082
+
+        # Verify API and UI are up
+        - task: CmdLine@2
+          displayName: 'Verify API is running'
+          inputs:
+            script: |
+              curl --fail http://localhost:8081/actuator/health || echo ❌ API not responding
+
+        - task: CmdLine@2
+          displayName: 'Verify UI is running'
+          inputs:
+            script: |
+              curl --fail http://localhost:8082 || echo ❌ UI not responding
 
 # -----------------------------------------
 # QAT Deployment (Mock)
