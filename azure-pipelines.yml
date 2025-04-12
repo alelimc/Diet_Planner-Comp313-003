@@ -199,25 +199,21 @@ stages:
   jobs:
     - job: DevDeploy
       steps:
-        # Start API
+        # Start API (inline)
         - task: CmdLine@2
           displayName: 'Start API on http://localhost:8081'
           inputs:
             script: |
               echo Starting API on http://localhost:8081...
-              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
-              timeout /t 15
-              echo ✅ API started successfully on http://localhost:8081
-
-        # Start UI
+              java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
+        
+        # Start UI (inline)
         - task: CmdLine@2
           displayName: 'Start UI on http://localhost:8082'
           inputs:
             script: |
               echo Starting UI on http://localhost:8082...
-              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
-              timeout /t 15
-              echo ✅ UI started successfully on http://localhost:8082
+              java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
 
         # Verify API is running
         - task: CmdLine@2
