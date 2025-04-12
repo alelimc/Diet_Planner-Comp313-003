@@ -205,111 +205,63 @@ stages:
         inputs:
           script: |
             "C:\Program Files\PowerShell\7\pwsh.exe" -Command "& {
-              # Enhanced process cleanup
-              Get-Process java -ErrorAction SilentlyContinue | 
-                Where-Object { $_.Path -like "*mealserviceapi*" -or $_.Path -like "*dietplanner*" } | 
-                Stop-Process -Force -ErrorAction SilentlyContinue
+              Get-Process java -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*mealserviceapi*' -or $_.Path -like '*dietplanner*' } | Stop-Process -Force -ErrorAction SilentlyContinue
               Start-Sleep -Seconds 2
 
-              # Start API with proper error handling
-              try {
-                  $apiProcess = Start-Process -FilePath "java.exe" `
-                    -ArgumentList "-jar `"$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar`"" `
-                    -WorkingDirectory "$(Pipeline.Workspace)\api-artifacts" `
-                    -WindowStyle Hidden `
-                    -PassThru
-                  
-                  if (-not $apiProcess) {
-                      throw "Failed to start API process"
-                  }
-                  Write-Host "##vso[task.setvariable variable=API_PID]$($apiProcess.Id)"
-              } catch {
-                  Write-Host "##vso[task.logissue type=error]API startup failed: $_"
-                  Write-Host "##vso[task.complete result=Failed]"
-                  exit 1
-              }
+              $apiProcess = Start-Process -FilePath 'java.exe' -ArgumentList '-jar \"$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar\"' -WorkingDirectory '$(Pipeline.Workspace)\api-artifacts' -WindowStyle Hidden -PassThru
+              if (-not $apiProcess) { throw 'Failed to start API process' }
+              Write-Host '##vso[task.setvariable variable=API_PID]$($apiProcess.Id)'
 
-              # Start UI with proper error handling
-              try {
-                  $uiProcess = Start-Process -FilePath "java.exe" `
-                    -ArgumentList "-jar `"$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar`"" `
-                    -WorkingDirectory "$(Pipeline.Workspace)\ui-artifacts" `
-                    -WindowStyle Hidden `
-                    -PassThru
-                  
-                  if (-not $uiProcess) {
-                      throw "Failed to start UI process"
-                  }
-                  Write-Host "##vso[task.setvariable variable=UI_PID]$($uiProcess.Id)"
-              } catch {
-                  Write-Host "##vso[task.logissue type=error]UI startup failed: $_"
-                  Write-Host "##vso[task.complete result=Failed]"
-                  exit 1
-              }
+              $uiProcess = Start-Process -FilePath 'java.exe' -ArgumentList '-jar \"$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar\"' -WorkingDirectory '$(Pipeline.Workspace)\ui-artifacts' -WindowStyle Hidden -PassThru
+              if (-not $uiProcess) { throw 'Failed to start UI process' }
+              Write-Host '##vso[task.setvariable variable=UI_PID]$($uiProcess.Id)'
 
-              # Enhanced verification with retries
               $maxRetries = 5
               $retryInterval = 5
-
-              # Verify API
               $apiVerified = $false
+              
               for ($i = 1; $i -le $maxRetries; $i++) {
-                  try {
-                      $response = Invoke-WebRequest -Uri "http://localhost:9091/actuator/health" `
-                        -UseBasicParsing `
-                        -TimeoutSec 10 `
-                        -ErrorAction Stop
-                      
-                      if ($response.StatusCode -eq 200) {
-                          $apiVerified = $true
-                          Write-Host "✅ API running (PID: $($apiProcess.Id)) - Attempt $i/$maxRetries"
-                          break
-                      }
-                  } catch {
-                      Write-Host "⚠ API not ready yet (Attempt $i/$maxRetries): $_"
-                      if ($i -lt $maxRetries) {
-                          Start-Sleep -Seconds $retryInterval
-                      }
+                try {
+                  $response = Invoke-WebRequest -Uri 'http://localhost:9091/actuator/health' -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+                  if ($response.StatusCode -eq 200) {
+                    $apiVerified = $true
+                    Write-Host \"✅ API running (PID: $($apiProcess.Id)) - Attempt $i/$maxRetries\"
+                    break
                   }
+                } catch {
+                  Write-Host \"⚠ API not ready yet (Attempt $i/$maxRetries): $_\"
+                  if ($i -lt $maxRetries) { Start-Sleep -Seconds $retryInterval }
+                }
               }
 
               if (-not $apiVerified) {
-                  Write-Host "##vso[task.logissue type=error]API failed to start after $maxRetries attempts"
-                  Write-Host "##vso[task.complete result=Failed]"
-                  exit 1
+                Write-Host '##vso[task.logissue type=error]API failed to start after $maxRetries attempts'
+                exit 1
               }
 
-              # Verify UI
               $uiVerified = $false
               for ($i = 1; $i -le $maxRetries; $i++) {
-                  try {
-                      $response = Invoke-WebRequest -Uri "http://localhost:9090" `
-                        -UseBasicParsing `
-                        -TimeoutSec 10 `
-                        -ErrorAction Stop
-                      
-                      if ($response.StatusCode -eq 200) {
-                          $uiVerified = $true
-                          Write-Host "✅ UI running (PID: $($uiProcess.Id)) - Attempt $i/$maxRetries"
-                          break
-                      }
-                  } catch {
-                      Write-Host "⚠ UI not ready yet (Attempt $i/$maxRetries): $_"
-                      if ($i -lt $maxRetries) {
-                          Start-Sleep -Seconds $retryInterval
-                      }
+                try {
+                  $response = Invoke-WebRequest -Uri 'http://localhost:9090' -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+                  if ($response.StatusCode -eq 200) {
+                    $uiVerified = $true
+                    Write-Host \"✅ UI running (PID: $($uiProcess.Id)) - Attempt $i/$maxRetries\"
+                    break
                   }
+                } catch {
+                  Write-Host \"⚠ UI not ready yet (Attempt $i/$maxRetries): $_\"
+                  if ($i -lt $maxRetries) { Start-Sleep -Seconds $retryInterval }
+                }
               }
 
               if (-not $uiVerified) {
-                  Write-Host "##vso[task.logissue type=error]UI failed to start after $maxRetries attempts"
-                  Write-Host "##vso[task.complete result=Failed]"
-                  exit 1
+                Write-Host '##vso[task.logissue type=error]UI failed to start after $maxRetries attempts'
+                exit 1
               }
 
-              # Final success message
-              Write-Host "##vso[task.setprogress value=100]"
-              Write-Host "Both services started successfully!"
+              Write-Host '##vso[task.setprogress value=100]'
+              Write-Host 'Both services started successfully!'
+            }"
               
 # -----------------------------------------
 # QAT Deployment (Mock)
