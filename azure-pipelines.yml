@@ -198,79 +198,54 @@ stages:
   dependsOn: Deliver
   jobs:
     - job: DevDeploy
-      displayName: 'Start Dev Environment (API:9091, UI:9090)'
+      displayName: 'Start Dev Environment'
       steps:
-        # Start API
+        # Start API Service
         - task: CmdLine@2
           displayName: 'Start API on port 9091'
           inputs:
             script: |
-              echo Starting API...
-              cd /D "$(Pipeline.Workspace)\api-artifacts"
-              start "API Server" /B cmd /c "java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1"
-              timeout /t 15 > nul
-              echo ✅ API should be running on http://localhost:9091
+              echo Starting API service...
+              cd /D "C:\agentsh\_work\1\api-artifacts"
+              java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1 &
+              echo Java process started in background
+              timeout /t 10 > nul
               type api.log
+              tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
 
-        # Start UI
+        # Start UI Service
         - task: CmdLine@2
           displayName: 'Start UI on port 9090'
           inputs:
             script: |
-              echo Starting UI...
-              cd /D "$(Pipeline.Workspace)\ui-artifacts"
-              start "UI Server" /B cmd /c "java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1"
-              timeout /t 15 > nul
-              echo ✅ UI should be running on http://localhost:9090
+              echo Starting UI service...
+              cd /D "C:\agentsh\_work\1\ui-artifacts"
+              java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1 &
+              echo Java process started in background
+              timeout /t 10 > nul
               type ui.log
+              tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
 
-        # Verify API
+        # Verify Services
         - task: CmdLine@2
-          displayName: 'Verify API is running (port 9091)'
+          displayName: 'Verify Services'
           inputs:
             script: |
-              echo Checking if API is running on port 9091...
-              setlocal enabledelayedexpansion
-              set RETRY_COUNT=0
-              :retry_api
-              curl --fail http://localhost:9091/actuator/health
-              if !errorlevel! equ 0 (
-                echo ✅ API is responding
-                exit /B 0
-              ) else (
-                set /A RETRY_COUNT+=1
-                if !RETRY_COUNT! geq 10 (
-                  echo ❌ API not responding after 10 retries.
-                  exit /B 1
-                )
-                echo Attempt !RETRY_COUNT! failed. Retrying in 5 seconds...
-                timeout /t 5 > nul
-                goto retry_api
+              echo Verifying API on port 9091...
+              curl --retry 5 --retry-delay 3 --fail http://localhost:9091/actuator/health
+              if errorlevel 1 (
+                echo ❌ API verification failed
+                exit /b 1
               )
+              echo ✅ API is running
 
-        # Verify UI
-        - task: CmdLine@2
-          displayName: 'Verify UI is running (port 9090)'
-          inputs:
-            script: |
-              echo Checking if UI is running on port 9090...
-              setlocal enabledelayedexpansion
-              set RETRY_COUNT=0
-              :retry_ui
-              curl --fail http://localhost:9090
-              if !errorlevel! equ 0 (
-                echo ✅ UI is responding
-                exit /B 0
-              ) else (
-                set /A RETRY_COUNT+=1
-                if !RETRY_COUNT! geq 10 (
-                  echo ❌ UI not responding after 10 retries.
-                  exit /B 1
-                )
-                echo Attempt !RETRY_COUNT! failed. Retrying in 5 seconds...
-                timeout /t 5 > nul
-                goto retry_ui
+              echo Verifying UI on port 9090...
+              curl --retry 5 --retry-delay 3 --fail http://localhost:9090
+              if errorlevel 1 (
+                echo ❌ UI verification failed
+                exit /b 1
               )
+              echo ✅ UI is running
 
 # -----------------------------------------
 # QAT Deployment (Mock)
