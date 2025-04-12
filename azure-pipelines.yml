@@ -200,27 +200,29 @@ stages:
     - job: DevDeploy
       displayName: 'Start Dev Environment (API:9091, UI:9090)'
       steps:
-        # Start API (on 9091)
-        - task: CmdLine@2
+        # Start API
+        - task: PowerShell@2
           displayName: 'Start API on http://localhost:9091'
           inputs:
+            targetType: inline
             script: |
-              echo Starting API on http://localhost:9091...
-              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
-              timeout /t 10
-              echo ✅ API started on port 9091.
+              Write-Host "Starting API on http://localhost:9091..."
+              Start-Process -FilePath "java" -ArgumentList "-jar", "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
+              Start-Sleep -Seconds 15
+              Write-Host "✅ API started."
 
-        # Start UI (on 9090)
-        - task: CmdLine@2
+        # Start UI
+        - task: PowerShell@2
           displayName: 'Start UI on http://localhost:9090'
           inputs:
+            targetType: inline
             script: |
-              echo Starting UI on http://localhost:9090...
-              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
-              timeout /t 10
-              echo ✅ UI started on port 9090.
+              Write-Host "Starting UI on http://localhost:9090..."
+              Start-Process -FilePath "java" -ArgumentList "-jar", "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
+              Start-Sleep -Seconds 15
+              Write-Host "✅ UI started."
 
-        # Verify API is running on port 9091
+        # Verify API is running
         - task: CmdLine@2
           displayName: 'Verify API is running on port 9091'
           inputs:
@@ -229,17 +231,16 @@ stages:
               for /L %%i in (1,1,10) do (
                 curl --fail http://localhost:9091/actuator/health && echo ✅ API is responding && exit /B 0
                 echo Attempt %%i failed. Retrying in 5 seconds...
-                timeout /t 5
+                timeout /t 5 > nul
               )
               echo ❌ API not responding after retries.
               exit /B 1
 
-        # Verify UI is running on port 9090
+        # Verify UI is running
         - task: CmdLine@2
           displayName: 'Verify UI is running on port 9090'
           inputs:
             script: |
-              echo Checking if UI is running on http://localhost:9090...
               curl --fail http://localhost:9090 || echo ❌ UI not responding
 
 # -----------------------------------------
