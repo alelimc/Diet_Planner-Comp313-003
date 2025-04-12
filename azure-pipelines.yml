@@ -200,29 +200,29 @@ stages:
     - job: DevDeploy
       displayName: 'Start Dev Environment (API:9091, UI:9090)'
       steps:
-        # Start API on port 9091
+        # Start API
         - task: CmdLine@2
           displayName: 'Start API on port 9091'
           inputs:
             script: |
-              echo Starting API on port 9091...
-              start "" cmd /c "java -jar \"$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar\""
+              echo Starting API...
+              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar" > api.log 2>&1
               timeout /t 15 > nul
-              echo ✅ API should now be running on http://localhost:9091
+              echo ✅ API should be running on http://localhost:9091
 
-        # Start UI on port 9090
+        # Start UI
         - task: CmdLine@2
           displayName: 'Start UI on port 9090'
           inputs:
             script: |
-              echo Starting UI on port 9090...
-              start "" cmd /c "java -jar \"$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar\""
+              echo Starting UI...
+              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar" > ui.log 2>&1
               timeout /t 15 > nul
-              echo ✅ UI should now be running on http://localhost:9090
+              echo ✅ UI should be running on http://localhost:9090
 
         # Verify API
         - task: CmdLine@2
-          displayName: 'Verify API is running'
+          displayName: 'Verify API is running (port 9091)'
           inputs:
             script: |
               echo Checking if API is running on port 9091...
@@ -236,7 +236,7 @@ stages:
 
         # Verify UI
         - task: CmdLine@2
-          displayName: 'Verify UI is running'
+          displayName: 'Verify UI is running (port 9090)'
           inputs:
             script: |
               curl --fail http://localhost:9090 || echo ❌ UI not responding
