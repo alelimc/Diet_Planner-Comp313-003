@@ -200,65 +200,46 @@ stages:
     - job: DevDeploy
       displayName: 'Start Dev Environment'
       steps:
-        # Cleanup previous instances first
-        - task: CmdLine@2
-          displayName: 'Cleanup Previous Processes'
+        - task: PowerShell@2
+          displayName: 'Start Services (Guaranteed)'
           inputs:
+            targetType: 'inline'
             script: |
-              taskkill /F /IM java.exe /T > nul 2>&1
-              timeout /t 2 > nul
+              # Kill existing processes
+              Stop-Process -Name java -Force -ErrorAction SilentlyContinue
+              Start-Sleep -Seconds 2
 
-        # Start API Service (properly detached)
-        - task: CmdLine@2
-          displayName: 'Start API on port 9091'
-          inputs:
-            script: |
-              echo Starting API service...
-              cd /D "C:\agentsh\_work\1\api-artifacts"
-              START "DietPlannerAPI" /B cmd /c "java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1"
-              echo Java process started with PID: %ERRORLEVEL%
-              timeout /t 5 > nul
-              type api.log
-              tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
+              # Start API
+              $apiProcess = Start-Process -FilePath "java" `
+                -ArgumentList "-jar `"C:\agentsh\_work\1\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar`"" `
+                -WorkingDirectory "C:\agentsh\_work\1\api-artifacts" `
+                -WindowStyle Hidden `
+                -PassThru
 
-        # Start UI Service (properly detached)
-        - task: CmdLine@2
-          displayName: 'Start UI on port 9090'
-          inputs:
-            script: |
-              echo Starting UI service...
-              cd /D "C:\agentsh\_work\1\ui-artifacts"
-              START "DietPlannerUI" /B cmd /c "java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1"
-              echo Java process started with PID: %ERRORLEVEL%
-              timeout /t 5 > nul
-              type ui.log
-              tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
+              # Start UI
+              $uiProcess = Start-Process -FilePath "java" `
+                -ArgumentList "-jar `"C:\agentsh\_work\1\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar`"" `
+                -WorkingDirectory "C:\agentsh\_work\1\ui-artifacts" `
+                -WindowStyle Hidden `
+                -PassThru
 
-        # Verify Services
-        - task: CmdLine@2
-          displayName: 'Verify Services'
-          inputs:
-            script: |
-              echo Waiting 15 seconds for services to initialize...
-              timeout /t 15 > nul
+              # Verify
+              Start-Sleep -Seconds 15
+              try {
+                  $apiHealth = Invoke-WebRequest -Uri "http://localhost:9091/actuator/health" -UseBasicParsing
+                  Write-Host "✅ API running (PID: $($apiProcess.Id))"
+              } catch {
+                  Write-Host "❌ API failed: $_"
+                  exit 1
+              }
 
-              echo Verifying API on port 9091...
-              curl --retry 3 --retry-delay 5 --fail http://localhost:9091/actuator/health
-              if errorlevel 1 (
-                echo ❌ API verification failed
-                type api.log
-                exit /b 1
-              )
-              echo ✅ API is running
-
-              echo Verifying UI on port 9090...
-              curl --retry 3 --retry-delay 5 --fail http://localhost:9090
-              if errorlevel 1 (
-                echo ❌ UI verification failed
-                type ui.log
-                exit /b 1
-              )
-              echo ✅ UI is running
+              try {
+                  $uiResponse = Invoke-WebRequest -Uri "http://localhost:9090" -UseBasicParsing
+                  Write-Host "✅ UI running (PID: $($uiProcess.Id))"
+              } catch {
+                  Write-Host "❌ UI failed: $_"
+                  exit 1
+              }
 
 # -----------------------------------------
 # QAT Deployment (Mock)
