@@ -198,56 +198,49 @@ stages:
   dependsOn: Deliver
   jobs:
     - job: DevDeploy
-      displayName: 'Run Spring Boot Services'
+      displayName: 'Start Dev Environment (API:9091, UI:9090)'
       steps:
-        # Start API on port 8081
+        # Start API (on 9091)
         - task: CmdLine@2
-          displayName: 'Start API on http://localhost:8081'
+          displayName: 'Start API on http://localhost:9091'
           inputs:
             script: |
-              echo Starting API on http://localhost:8081...
+              echo Starting API on http://localhost:9091...
               start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
               timeout /t 10
-              echo ✅ API started.
-          env:
-            JAVA_TOOL_OPTIONS: "-Dserver.port=8081"
+              echo ✅ API started on port 9091.
 
-        # Start UI on port 8082
+        # Start UI (on 9090)
         - task: CmdLine@2
-          displayName: 'Start UI on http://localhost:8082'
+          displayName: 'Start UI on http://localhost:9090'
           inputs:
             script: |
-              echo Starting UI on http://localhost:8082...
+              echo Starting UI on http://localhost:9090...
               start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
               timeout /t 10
-              echo ✅ UI started.
-          env:
-            JAVA_TOOL_OPTIONS: "-Dserver.port=8082"
+              echo ✅ UI started on port 9090.
 
-        # Verify API is running on 8081
+        # Verify API is running on port 9091
         - task: CmdLine@2
-          displayName: 'Verify API is running (with retries)'
+          displayName: 'Verify API is running on port 9091'
           inputs:
             script: |
-              echo Checking if API is running on port 8081...
+              echo Checking if API is running on http://localhost:9091...
               for /L %%i in (1,1,10) do (
-                curl --fail http://localhost:8081/actuator/health && echo ✅ API is responding && exit /B 0
+                curl --fail http://localhost:9091/actuator/health && echo ✅ API is responding && exit /B 0
                 echo Attempt %%i failed. Retrying in 5 seconds...
                 timeout /t 5
               )
               echo ❌ API not responding after retries.
               exit /B 1
 
-        # Verify UI is running on 8082
+        # Verify UI is running on port 9090
         - task: CmdLine@2
-          displayName: 'Verify UI is running'
+          displayName: 'Verify UI is running on port 9090'
           inputs:
             script: |
-              echo Checking if UI is running on port 8082...
-              curl --fail http://localhost:8082 || (
-                echo ❌ UI not responding on http://localhost:8082
-                exit /B 1
-              )
+              echo Checking if UI is running on http://localhost:9090...
+              curl --fail http://localhost:9090 || echo ❌ UI not responding
 
 # -----------------------------------------
 # QAT Deployment (Mock)
