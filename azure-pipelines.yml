@@ -198,29 +198,34 @@ stages:
   dependsOn: Deliver
   jobs:
     - job: DevDeploy
+      displayName: 'Run Spring Boot Services'
       steps:
-        # Start API (inline)
+        # Start API on port 8081
         - task: CmdLine@2
           displayName: 'Start API on http://localhost:8081'
           inputs:
             script: |
               echo Starting API on http://localhost:8081...
-              java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
-        
-        # Start UI (inline)
+              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar" --server.port=8081
+              timeout /t 10
+              echo ✅ API started.
+
+        # Start UI on port 8082
         - task: CmdLine@2
           displayName: 'Start UI on http://localhost:8082'
           inputs:
             script: |
               echo Starting UI on http://localhost:8082...
-              java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
+              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar" --server.port=8082
+              timeout /t 10
+              echo ✅ UI started.
 
-        # Verify API is running
+        # Verify API is running on 8081
         - task: CmdLine@2
           displayName: 'Verify API is running (with retries)'
           inputs:
             script: |
-              echo Checking if API is running...
+              echo Checking if API is running on port 8081...
               for /L %%i in (1,1,10) do (
                 curl --fail http://localhost:8081/actuator/health && echo ✅ API is responding && exit /B 0
                 echo Attempt %%i failed. Retrying in 5 seconds...
@@ -229,12 +234,16 @@ stages:
               echo ❌ API not responding after retries.
               exit /B 1
 
-        # Verify UI is running
+        # Verify UI is running on 8082
         - task: CmdLine@2
           displayName: 'Verify UI is running'
           inputs:
             script: |
-              curl --fail http://localhost:8082 || echo ❌ UI not responding
+              echo Checking if UI is running on port 8082...
+              curl --fail http://localhost:8082 || (
+                echo ❌ UI not responding on http://localhost:8082
+                exit /B 1
+              )
 
 # -----------------------------------------
 # QAT Deployment (Mock)
