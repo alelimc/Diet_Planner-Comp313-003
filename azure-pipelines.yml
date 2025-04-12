@@ -206,9 +206,11 @@ stages:
           inputs:
             script: |
               echo Starting API on http://localhost:8081...
-              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar" --server.port=8081
+              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
               timeout /t 10
               echo ✅ API started.
+          env:
+            JAVA_TOOL_OPTIONS: "-Dserver.port=8081"
 
         # Start UI on port 8082
         - task: CmdLine@2
@@ -216,9 +218,11 @@ stages:
           inputs:
             script: |
               echo Starting UI on http://localhost:8082...
-              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar" --server.port=8082
+              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
               timeout /t 10
               echo ✅ UI started.
+          env:
+            JAVA_TOOL_OPTIONS: "-Dserver.port=8082"
 
         # Verify API is running on 8081
         - task: CmdLine@2
