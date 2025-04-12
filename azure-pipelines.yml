@@ -206,9 +206,11 @@ stages:
           inputs:
             script: |
               echo Starting API...
-              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar" > api.log 2>&1
+              cd /D "$(Pipeline.Workspace)\api-artifacts"
+              start "API Server" /B cmd /c "java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1"
               timeout /t 15 > nul
               echo ✅ API should be running on http://localhost:9091
+              type api.log
 
         # Start UI
         - task: CmdLine@2
@@ -216,9 +218,11 @@ stages:
           inputs:
             script: |
               echo Starting UI...
-              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar" > ui.log 2>&1
+              cd /D "$(Pipeline.Workspace)\ui-artifacts"
+              start "UI Server" /B cmd /c "java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1"
               timeout /t 15 > nul
               echo ✅ UI should be running on http://localhost:9090
+              type ui.log
 
         # Verify API
         - task: CmdLine@2
@@ -226,20 +230,47 @@ stages:
           inputs:
             script: |
               echo Checking if API is running on port 9091...
-              for /L %%i in (1,1,10) do (
-                curl --fail http://localhost:9091/actuator/health && echo ✅ API is responding && exit /B 0
-                echo Attempt %%i failed. Retrying in 5 seconds...
+              setlocal enabledelayedexpansion
+              set RETRY_COUNT=0
+              :retry_api
+              curl --fail http://localhost:9091/actuator/health
+              if !errorlevel! equ 0 (
+                echo ✅ API is responding
+                exit /B 0
+              ) else (
+                set /A RETRY_COUNT+=1
+                if !RETRY_COUNT! geq 10 (
+                  echo ❌ API not responding after 10 retries.
+                  exit /B 1
+                )
+                echo Attempt !RETRY_COUNT! failed. Retrying in 5 seconds...
                 timeout /t 5 > nul
+                goto retry_api
               )
-              echo ❌ API not responding after retries.
-              exit /B 1
 
         # Verify UI
         - task: CmdLine@2
           displayName: 'Verify UI is running (port 9090)'
           inputs:
             script: |
-              curl --fail http://localhost:9090 || echo ❌ UI not responding
+              echo Checking if UI is running on port 9090...
+              setlocal enabledelayedexpansion
+              set RETRY_COUNT=0
+              :retry_ui
+              curl --fail http://localhost:9090
+              if !errorlevel! equ 0 (
+                echo ✅ UI is responding
+                exit /B 0
+              ) else (
+                set /A RETRY_COUNT+=1
+                if !RETRY_COUNT! geq 10 (
+                  echo ❌ UI not responding after 10 retries.
+                  exit /B 1
+                )
+                echo Attempt !RETRY_COUNT! failed. Retrying in 5 seconds...
+                timeout /t 5 > nul
+                goto retry_ui
+              )
 
 # -----------------------------------------
 # QAT Deployment (Mock)
