@@ -205,23 +205,21 @@ stages:
           inputs:
             script: |
               echo Starting API on http://localhost:8081...
-              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\dietplanner-api.jar"
-              timeout /t 10
-              echo ✅ API start command issued.
+              start "" java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
+              timeout /t 15
+              echo ✅ API started successfully on http://localhost:8081
 
-        # Start UI (Optional: only if UI is a separate Node app)
+        # Start UI
         - task: CmdLine@2
           displayName: 'Start UI on http://localhost:8082'
-          condition: false # Skip if UI isn't a Node app
           inputs:
             script: |
               echo Starting UI on http://localhost:8082...
-              cd $(Pipeline.Workspace)\ui-artifacts
-              start "" cmd /c "npm install && npm start"
-              timeout /t 10
-              echo ✅ UI start command issued.
+              start "" java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
+              timeout /t 15
+              echo ✅ UI started successfully on http://localhost:8082
 
-        # Retry check for API with delay
+        # Verify API is running
         - task: CmdLine@2
           displayName: 'Verify API is running (with retries)'
           inputs:
@@ -238,7 +236,6 @@ stages:
         # Verify UI is running
         - task: CmdLine@2
           displayName: 'Verify UI is running'
-          condition: false
           inputs:
             script: |
               curl --fail http://localhost:8082 || echo ❌ UI not responding
