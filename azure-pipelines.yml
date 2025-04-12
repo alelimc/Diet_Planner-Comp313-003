@@ -204,7 +204,9 @@ stages:
           displayName: 'Start Services (Guaranteed)'
           inputs:
             targetType: 'inline'
+            pwsh: true  # THIS IS THE CRITICAL LINE
             script: |
+              "C:\Program Files\PowerShell\7\pwsh.exe" -Command "& {
               # Enhanced process cleanup
               Get-Process java -ErrorAction SilentlyContinue | 
                 Where-Object { $_.Path -like "*mealserviceapi*" -or $_.Path -like "*dietplanner*" } | 
