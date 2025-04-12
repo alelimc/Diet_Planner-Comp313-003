@@ -200,29 +200,37 @@ stages:
     - job: DevDeploy
       displayName: 'Start Dev Environment'
       steps:
-        # Start API Service
+        # Cleanup previous instances first
+        - task: CmdLine@2
+          displayName: 'Cleanup Previous Processes'
+          inputs:
+            script: |
+              taskkill /F /IM java.exe /T > nul 2>&1
+              timeout /t 2 > nul
+
+        # Start API Service (properly detached)
         - task: CmdLine@2
           displayName: 'Start API on port 9091'
           inputs:
             script: |
               echo Starting API service...
               cd /D "C:\agentsh\_work\1\api-artifacts"
-              java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1 &
-              echo Java process started in background
-              timeout /t 10 > nul
+              START "DietPlannerAPI" /B cmd /c "java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1"
+              echo Java process started with PID: %ERRORLEVEL%
+              timeout /t 5 > nul
               type api.log
               tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
 
-        # Start UI Service
+        # Start UI Service (properly detached)
         - task: CmdLine@2
           displayName: 'Start UI on port 9090'
           inputs:
             script: |
               echo Starting UI service...
               cd /D "C:\agentsh\_work\1\ui-artifacts"
-              java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1 &
-              echo Java process started in background
-              timeout /t 10 > nul
+              START "DietPlannerUI" /B cmd /c "java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1"
+              echo Java process started with PID: %ERRORLEVEL%
+              timeout /t 5 > nul
               type ui.log
               tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
 
@@ -231,18 +239,23 @@ stages:
           displayName: 'Verify Services'
           inputs:
             script: |
+              echo Waiting 15 seconds for services to initialize...
+              timeout /t 15 > nul
+
               echo Verifying API on port 9091...
-              curl --retry 5 --retry-delay 3 --fail http://localhost:9091/actuator/health
+              curl --retry 3 --retry-delay 5 --fail http://localhost:9091/actuator/health
               if errorlevel 1 (
                 echo ❌ API verification failed
+                type api.log
                 exit /b 1
               )
               echo ✅ API is running
 
               echo Verifying UI on port 9090...
-              curl --retry 5 --retry-delay 3 --fail http://localhost:9090
+              curl --retry 3 --retry-delay 5 --fail http://localhost:9090
               if errorlevel 1 (
                 echo ❌ UI verification failed
+                type ui.log
                 exit /b 1
               )
               echo ✅ UI is running
