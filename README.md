@@ -1,34 +1,56 @@
-Development Environment Setup
+💻 Development Environment Setup (Windows)
 
-This project was developed on Windows. The following steps are provided to setup the development environment in a Windows machine:
+To run this project locally on a Windows machine, follow the steps below:
+✅ 1. Install Java Development Kit (JDK)
 
-	1. Install Java
-		○ https://www.oracle.com/ca-en/java/technologies/downloads/#jdk23-windows
-	2. Install IDE of choice. For this project, the team mainly used Eclipse for Windows:
-		○ https://www.eclipse.org/downloads/packages/release/2024-09/r/eclipse-ide-enterprise-java-and-web-developers
-		○ During installation, choose the "Eclipse IDE for Java Developers" option and specify the path to your installed JDK to link Eclipse with your Java environment
-	3.  Install Spring Boot in Eclipse 
-		○ Launch Eclipse.
-		○ Open or create a new project.
-		○ Click “Help,” which is the last option in the menu bar.
-		○ Click “Eclipse Marketplace” from the dropdown menu.
-		○ Type “Spring Boot” in the search box and hit “Enter.”
-		○ Click “Install” below the latest version of Spring Tools.
-		○ Relaunch Eclipse once Spring Tools is installed.
-		○ (Steps with screenshots: https://www.wikihow.com/Install-Spring-Boot-in-Eclipse)
-	4. Install MySQL: https://www.w3schools.com/mysql/mysql_install_windows.asp
-	5. Install MySQL Workbench: https://dev.mysql.com/downloads/workbench/
-	6. Install Lombok: https://projectlombok.org/download
-		○ Run the jar file and it will automatically detect the eclipse IDE in your machine. Click Install.
-		○ Steps with screenshots: https://www.baeldung.com/lombok-ide
-	7. Open your local instance in MySQL Workbench
-	8. Run the following scripts with the following file names (Located in this git repo):
-		○ dietplannerdb_script - To build the database schema of the app
-		○ meals_script - To populate the database with meal data
-		○ GetUserMealPlans_storedproc - Used for displaying saved meal plans
+    Download and install JDK 17 or higher:
+    🔗 Oracle JDK Downloads
 
-Upon successful setup of the development environment, you should be able to run the application.
+✅ 2. Install an IDE (Recommended: Eclipse)
 
+    Download Eclipse IDE for Enterprise Java Developers:
+    🔗 Eclipse Downloads
 
+    During setup, make sure to link it to your JDK installation path.
 
+✅ 3. Install Spring Tools in Eclipse
 
+    Launch Eclipse.
+
+    Go to Help > Eclipse Marketplace.
+
+    Search for Spring Tools.
+
+    Click Install on the latest version.
+
+    Restart Eclipse when prompted.
+
+📸 Guide with screenshots:
+🔗 How to Install Spring Boot in Eclipse
+✅ 4. Install MySQL Server
+
+    Follow this tutorial to install MySQL on Windows:
+    🔗 MySQL Installation Guide
+
+✅ 5. Install MySQL Workbench
+
+    GUI tool to manage and run SQL scripts:
+    🔗 Download MySQL Workbench
+
+✅ 6. Install Lombok (for annotations like @Data, @Builder, etc.)
+
+    Download the Lombok jar:
+    🔗 Lombok Download
+
+    Run the JAR and follow prompts to integrate it with Eclipse.
+
+📸 Setup Guide:
+🔗 Lombok IDE Integration
+✅ 7. Open MySQL Workbench and Connect to Your Local Instance
+✅ 8. Run SQL Scripts (Included in the Git Repository)
+
+Use MySQL Workbench to run the following .sql files found in the repo:
+Script File							Purpose
+dietplannerdb_script.sql			Creates the database schema
+meals_script.sql					Populates the database with meal data
+GetUserMealPlans_storedproc.sql		Adds stored procedure for meal plan display
