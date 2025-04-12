@@ -200,21 +200,44 @@ stages:
     - job: DevDeploy
       displayName: 'Start Dev Environment'
       steps:
-        # Cleanup previous processes
+        # Cleanup previous processes - WORKING VERSION
         - task: CmdLine@2
           displayName: 'Cleanup Previous Java Processes'
           inputs:
             script: |
-              taskkill /F /IM java.exe /T > nul 2>&1
-              timeout /t 3 > nul
+              @echo off
+              echo Attempting to kill existing Java processes...
+              set JAVA_PIDS=
+              
+              :: Get PIDs of our specific Java processes
+              for /f "tokens=2 delims=," %%a in (
+                'wmic process where "name='java.exe' and (commandline like '%%mealserviceapi%%' or commandline like '%%dietplanner%%')" get processid^,commandline /format:csv ^| findstr /v "Node"'
+              ) do (
+                set JAVA_PIDS=!JAVA_PIDS! %%a
+              )
+              
+              :: Kill if found
+              if defined JAVA_PIDS (
+                echo Killing Java processes: !JAVA_PIDS!
+                taskkill /PID !JAVA_PIDS! /F /T > nul
+              ) else (
+                echo No matching Java processes found
+              )
+              timeout /t 2 > nul
 
         # Start API Service
         - task: CmdLine@2
           displayName: 'Start API Service (Port 9091)'
           inputs:
             script: |
+              @echo off
+              setlocal enabledelayedexpansion
               cd /D "$(Pipeline.Workspace)\api-artifacts"
-              start "DietPlannerAPI" /MIN cmd /c "java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1 & echo !time! > api.starttime"
+              
+              :: Start in new window with logging
+              start "DietPlannerAPI" /B cmd /c "java -jar mealserviceapi-0.0.1-SNAPSHOT.jar > api.log 2>&1 & echo !time! Started > api.starttime"
+              
+              :: Verify process started
               timeout /t 5 > nul
               type api.log
               tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
@@ -224,8 +247,14 @@ stages:
           displayName: 'Start UI Service (Port 9090)'
           inputs:
             script: |
+              @echo off
+              setlocal enabledelayedexpansion
               cd /D "$(Pipeline.Workspace)\ui-artifacts"
-              start "DietPlannerUI" /MIN cmd /c "java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1 & echo !time! > ui.starttime"
+              
+              :: Start in new window with logging
+              start "DietPlannerUI" /B cmd /c "java -jar dietplanner-0.0.1-SNAPSHOT.jar > ui.log 2>&1 & echo !time! Started > ui.starttime"
+              
+              :: Verify process started
               timeout /t 5 > nul
               type ui.log
               tasklist /FI "IMAGENAME eq java.exe" /FO TABLE
@@ -235,45 +264,47 @@ stages:
           displayName: 'Verify Services'
           inputs:
             script: |
+              @echo off
+              setlocal enabledelayedexpansion
               echo Waiting 20 seconds for services to initialize...
               timeout /t 20 > nul
 
-              echo Checking API on port 9091...
-              set RETRY_COUNT=0
-              :retry_api
-              curl --fail http://localhost:9091/actuator/health
-              if %errorlevel% equ 0 (
-                echo ✅ API is running
-                goto verify_ui
+              :: API Verification
+              set API_UP=0
+              for /L %%i in (1,1,5) do (
+                curl --fail http://localhost:9091/actuator/health > nul 2>&1
+                if !errorlevel! equ 0 (
+                  set API_UP=1
+                  echo ✅ API is responding (Attempt %%i/5)
+                  goto :verify_ui
+                )
+                echo API not ready (Attempt %%i/5), waiting 5 seconds...
+                timeout /t 5 > nul
               )
-              set /A RETRY_COUNT+=1
-              if %RETRY_COUNT% geq 5 (
-                echo ❌ API failed to start after 5 attempts
+              if !API_UP! equ 0 (
+                echo ❌ API failed to start
                 type "$(Pipeline.Workspace)\api-artifacts\api.log"
                 exit /b 1
               )
-              echo Attempt %RETRY_COUNT%/5 failed. Retrying in 5 seconds...
-              timeout /t 5 > nul
-              goto retry_api
 
+              :: UI Verification
               :verify_ui
-              echo Checking UI on port 9090...
-              set RETRY_COUNT=0
-              :retry_ui
-              curl --fail http://localhost:9090
-              if %errorlevel% equ 0 (
-                echo ✅ UI is running
-                exit /b 0
+              set UI_UP=0
+              for /L %%i in (1,1,5) do (
+                curl --fail http://localhost:9090 > nul 2>&1
+                if !errorlevel! equ 0 (
+                  set UI_UP=1
+                  echo ✅ UI is responding (Attempt %%i/5)
+                  exit /b 0
+                )
+                echo UI not ready (Attempt %%i/5), waiting 5 seconds...
+                timeout /t 5 > nul
               )
-              set /A RETRY_COUNT+=1
-              if %RETRY_COUNT% geq 5 (
-                echo ❌ UI failed to start after 5 attempts
+              if !UI_UP! equ 0 (
+                echo ❌ UI failed to start
                 type "$(Pipeline.Workspace)\ui-artifacts\ui.log"
                 exit /b 1
               )
-              echo Attempt %RETRY_COUNT%/5 failed. Retrying in 5 seconds...
-              timeout /t 5 > nul
-              goto retry_ui
 
 # -----------------------------------------
 # QAT Deployment (Mock)
