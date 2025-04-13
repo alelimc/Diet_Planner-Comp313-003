@@ -189,9 +189,6 @@ stages:
             ArtifactName: 'dietplanner-api-$(Build.BuildId)'
             publishLocation: 'Container'
 
-# -----------------------------------------
-# Deploy to Dev Environment (Simplified Launch)
-# -----------------------------------------
 - stage: DeployToDev
   displayName: 'Deploy to Development Environment'
   dependsOn: Deliver
@@ -199,25 +196,70 @@ stages:
     - job: DevDeploy
       displayName: 'Start Dev Environment'
       steps:
-        # Start UI - for user login
-        - task: CmdLine@2
-          displayName: 'Run UI Locally on Port 9090'
-          condition: succeeded()
+        - task: PowerShell@2
+          displayName: 'Start UI & API Services (background)'
           inputs:
+            targetType: 'inline'
+            pwsh: true
             script: |
-              echo Starting UI service on http://localhost:9090...
-              java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
-              echo ✅ UI is responding!
+              Write-Host "🟡 Stopping any lingering java services..."
+              Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
-        # Start API - foreground process
-        - task: CmdLine@2
-          displayName: 'Run API Locally on Port 9091'
-          inputs:
-            script: |
-              echo Starting API service on http://localhost:9091...
-              java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
-              echo ✅ API is responding!
-              
+              $uiJar = "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
+              $apiJar = "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
+
+              Write-Host "🚀 Launching UI on port 9090..."
+              $uiProc = Start-Process -FilePath "java.exe" -ArgumentList "-jar `"$uiJar`"" -PassThru -WindowStyle Hidden
+              Write-Host "✅ UI PID: $($uiProc.Id)"
+
+              Start-Sleep -Seconds 10
+              $uiReady = $false
+              for ($i = 1; $i -le 10; $i++) {
+                try {
+                  $res = Invoke-WebRequest http://localhost:9090 -UseBasicParsing -TimeoutSec 5
+                  if ($res.StatusCode -eq 200) {
+                    Write-Host "✅ UI running on http://localhost:9090"
+                    $uiReady = $true
+                    break
+                  }
+                } catch {
+                  Write-Host "⏳ Waiting for UI to start... ($i/10)"
+                  Start-Sleep -Seconds 5
+                }
+              }
+
+              if (-not $uiReady) {
+                Write-Host "❌ UI failed to start"
+                exit 1
+              }
+
+              Write-Host "🚀 Launching API on port 9091..."
+              $apiProc = Start-Process -FilePath "java.exe" -ArgumentList "-jar `"$apiJar`"" -PassThru -WindowStyle Hidden
+              Write-Host "✅ API PID: $($apiProc.Id)"
+
+              Start-Sleep -Seconds 10
+              $apiReady = $false
+              for ($i = 1; $i -le 10; $i++) {
+                try {
+                  $res = Invoke-WebRequest http://localhost:9091/actuator/health -UseBasicParsing -TimeoutSec 5
+                  if ($res.StatusCode -eq 200) {
+                    Write-Host "✅ API running on http://localhost:9091"
+                    $apiReady = $true
+                    break
+                  }
+                } catch {
+                  Write-Host "⏳ Waiting for API to start... ($i/10)"
+                  Start-Sleep -Seconds 5
+                }
+              }
+
+              if (-not $apiReady) {
+                Write-Host "❌ API failed to start"
+                exit 1
+              }
+
+              Write-Host "🎉 Both services started and reachable!"
+
 # -----------------------------------------
 # QAT Deployment (Mock)
 # -----------------------------------------
