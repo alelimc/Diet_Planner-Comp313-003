@@ -201,7 +201,7 @@ stages:
       displayName: 'Start Dev Environment'
       steps:
       - task: PowerShell@2
-        displayName: 'Start Services via PowerShell 7'
+        displayName: 'Start Services via PowerShell 7-1'
         inputs:
           targetType: 'inline'
           pwsh: true  # Enables PowerShell Core
