@@ -1,4 +1,4 @@
-# Azure CI/CD pipeline Author: ANM
+# Azure DevOps Project CI/CD pipeline Author: ANM
 
 trigger:
   branches:
