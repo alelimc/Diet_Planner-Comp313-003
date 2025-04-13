@@ -189,6 +189,9 @@ stages:
             ArtifactName: 'dietplanner-api-$(Build.BuildId)'
             publishLocation: 'Container'
 
+# -----------------------------------------
+# Deploy to Dev Environment (Simplified Launch)
+# -----------------------------------------
 - stage: DeployToDev
   displayName: 'Deploy to Development Environment'
   dependsOn: Deliver
@@ -259,6 +262,8 @@ stages:
               }
 
               Write-Host "🎉 Both services started and reachable!"
+
+              
 
 # -----------------------------------------
 # QAT Deployment (Mock)
