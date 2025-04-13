@@ -191,31 +191,53 @@ stages:
             publishLocation: 'Container'
 
 # -----------------------------------------
-# Deploy to Dev Environment (Simplified Launch)
+# Deploy to Dev Environment (Real Launch)
 # -----------------------------------------
 - stage: DeployToDev
   displayName: 'Deploy to Development Environment'
   dependsOn: Deliver
   jobs:
     - job: DevDeploy
-      displayName: 'Start Dev Environment (Manual Observation)'
+      displayName: 'Start Dev Environment'
       steps:
-        # Start API - foreground process
+        # Start UI first (on port 9090)
         - task: CmdLine@2
-          displayName: 'Run API Locally on Port 9091'
+          displayName: 'Start UI on port 9090'
           inputs:
             script: |
-              echo Starting API service on http://localhost:9091...
-              java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
+              echo 🚀 Starting UI on port 9090...
+              start "" cmd /c "java -jar \"$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar\""
+              timeout /t 15
+              echo ✅ UI launched in background.
 
-        # Start UI - only reached after API stops
+        # Start API next (on port 9091)
         - task: CmdLine@2
-          displayName: 'Run UI Locally on Port 9090'
-          condition: succeeded()
+          displayName: 'Start API on port 9091'
           inputs:
             script: |
-              echo Starting UI service on http://localhost:9090...
-              java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
+              echo 🚀 Starting API on port 9091...
+              start "" cmd /c "java -jar \"$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar\""
+              timeout /t 15
+              echo ✅ API launched in background.
+
+        # Verify UI is running
+        - task: CmdLine@2
+          displayName: 'Verify UI is running'
+          inputs:
+            script: |
+              echo Checking if UI is up on http://localhost:9090...
+              curl --fail http://localhost:9090 || (echo ❌ UI is not responding && exit /b 1)
+              echo ✅ UI is responding!
+
+        # Verify API is running
+        - task: CmdLine@2
+          displayName: 'Verify API is running'
+          inputs:
+            script: |
+              echo Checking if API is up on http://localhost:9091/actuator/health...
+              curl --fail http://localhost:9091/actuator/health || (echo ❌ API is not responding && exit /b 1)
+              echo ✅ API is responding!
+
               
 # -----------------------------------------
 # QAT Deployment (Mock)
