@@ -191,89 +191,31 @@ stages:
             publishLocation: 'Container'
 
 # -----------------------------------------
-# Deploy to Dev Environment (Real Launch)
+# Deploy to Dev Environment (Simplified Launch)
 # -----------------------------------------
 - stage: DeployToDev
   displayName: 'Deploy to Development Environment'
   dependsOn: Deliver
   jobs:
     - job: DevDeploy
-      displayName: 'Start Dev Environment'
+      displayName: 'Start Dev Environment (Manual Observation)'
       steps:
-      - task: PowerShell@2
-        displayName: 'Start Services via PowerShell 7-1'
-        inputs:
-          targetType: 'inline'
-          pwsh: true  # Enables PowerShell Core
-          script: |
-            $pwshPath = 'C:\Program Files\PowerShell\7\pwsh.exe'
-            if (-Not (Test-Path $pwshPath)) {
-              Write-Host "##vso[task.logissue type=error]PowerShell 7 not found at $pwshPath"
-              exit 1
-            }
+        # Start API - foreground process
+        - task: CmdLine@2
+          displayName: 'Run API Locally on Port 9091'
+          inputs:
+            script: |
+              echo Starting API service on http://localhost:9091...
+              java -jar "$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar"
 
-            & "$pwshPath" -NoProfile -Command {
-              Write-Host "🔍 Stopping any existing services..."
-              Get-Process java -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*mealserviceapi*' -or $_.Path -like '*dietplanner*' } | Stop-Process -Force -ErrorAction SilentlyContinue
-              Start-Sleep -Seconds 2
-
-              $apiJar = '$(Pipeline.Workspace)\api-artifacts\mealserviceapi-0.0.1-SNAPSHOT.jar'
-              $uiJar = '$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar'
-
-              Write-Host "🚀 Starting API on port 9091..."
-              $apiProcess = Start-Process -FilePath 'java.exe' -ArgumentList "-jar `"$apiJar`"" -WindowStyle Hidden -PassThru
-              Write-Host "##vso[task.setvariable variable=API_PID]$($apiProcess.Id)"
-
-              Write-Host "🚀 Starting UI on port 9090..."
-              $uiProcess = Start-Process -FilePath 'java.exe' -ArgumentList "-jar `"$uiJar`"" -WindowStyle Hidden -PassThru
-              Write-Host "##vso[task.setvariable variable=UI_PID]$($uiProcess.Id)"
-
-              $maxRetries = 5
-              $retryInterval = 5
-              $apiReady = $false
-
-              for ($i = 1; $i -le $maxRetries; $i++) {
-                try {
-                  $res = Invoke-WebRequest http://localhost:9091/actuator/health -UseBasicParsing -TimeoutSec 10
-                  if ($res.StatusCode -eq 200) {
-                    Write-Host "✅ API is running - Attempt $i"
-                    $apiReady = $true
-                    break
-                  }
-                } catch {
-                  Write-Host "⏳ API not ready (Attempt $i)..."
-                  Start-Sleep -Seconds $retryInterval
-                }
-              }
-
-              if (-Not $apiReady) {
-                Write-Host "❌ API failed to start after $maxRetries attempts"
-                exit 1
-              }
-
-              $uiReady = $false
-              for ($i = 1; $i -le $maxRetries; $i++) {
-                try {
-                  $res = Invoke-WebRequest http://localhost:9090 -UseBasicParsing -TimeoutSec 10
-                  if ($res.StatusCode -eq 200) {
-                    Write-Host "✅ UI is running - Attempt $i"
-                    $uiReady = $true
-                    break
-                  }
-                } catch {
-                  Write-Host "⏳ UI not ready (Attempt $i)..."
-                  Start-Sleep -Seconds $retryInterval
-                }
-              }
-
-              if (-Not $uiReady) {
-                Write-Host "❌ UI failed to start after $maxRetries attempts"
-                exit 1
-              }
-
-              Write-Host "🎉 Both services started successfully!"
-            }
-
+        # Start UI - only reached after API stops
+        - task: CmdLine@2
+          displayName: 'Run UI Locally on Port 9090'
+          condition: succeeded()
+          inputs:
+            script: |
+              echo Starting UI service on http://localhost:9090...
+              java -jar "$(Pipeline.Workspace)\ui-artifacts\dietplanner-0.0.1-SNAPSHOT.jar"
               
 # -----------------------------------------
 # QAT Deployment (Mock)
