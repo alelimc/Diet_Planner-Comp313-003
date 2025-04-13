@@ -262,9 +262,11 @@ stages:
               }
 
               Write-Host "🎉 Both services started and reachable!"
-
               
-
+              # ⏳ Add delay for manual browser-based demo
+              Write-Host "⏳ Holding pipeline for 3 minutes so you can demo in browser..."
+              Start-Sleep -Seconds 60
+            
 # -----------------------------------------
 # QAT Deployment (Mock)
 # -----------------------------------------
